@@ -1,97 +1,31 @@
-import { useState, useEffect } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { socket } from '../socket';
+import { useState } from 'react';
+import { useParams, useLocation } from 'react-router-dom';
+import { useWebRTC } from '../hooks/useWebRTC';
+import VideoTile from '../components/VideoTile';
+import Controls from '../components/Controls';
 import ChatPanel from '../components/ChatPanel';
 
 export default function Room() {
   const { roomId } = useParams();
   const location = useLocation();
-  const navigate = useNavigate();
 
   const name = location.state?.name?.trim() || 'Guest';
 
-  const [isJoined, setIsJoined] = useState(false);
-  const [peerName, setPeerName] = useState(null);
+  const {
+    localStream,
+    peerName,
+    messages,
+    sendMessage,
+    micOn,
+    camOn,
+    toggleMic,
+    toggleCam,
+    leave,
+    error,
+    isJoined,
+  } = useWebRTC(roomId, name);
+
   const [copied, setCopied] = useState(false);
-  const [messages, setMessages] = useState([]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const onUserJoined = ({ name: joinedName }) => {
-      if (!isMounted) return;
-      setPeerName(joinedName);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `sys-${Date.now()}-${Math.random()}`,
-          type: 'system',
-          text: `${joinedName} joined`,
-          time: Date.now(),
-        },
-      ]);
-    };
-
-    const onUserLeft = ({ name: leftName } = {}) => {
-      if (!isMounted) return;
-      setPeerName((currentPeer) => {
-        const displayName = leftName || currentPeer || 'User';
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `sys-${Date.now()}-${Math.random()}`,
-            type: 'system',
-            text: `${displayName} left`,
-            time: Date.now(),
-          },
-        ]);
-        return null;
-      });
-    };
-
-    const onChatMessage = (msg) => {
-      if (!isMounted) return;
-      setMessages((prev) => [...prev, msg]);
-    };
-
-    socket.on('user-joined', onUserJoined);
-    socket.on('user-left', onUserLeft);
-    socket.on('chat-message', onChatMessage);
-
-    // Join room
-    socket.emit('join-room', { roomId, name }, (res) => {
-      if (!isMounted) return;
-
-      if (!res?.ok) {
-        navigate('/', { state: { error: res?.error || 'FAILED_TO_JOIN' } });
-        return;
-      }
-
-      setIsJoined(true);
-
-      // Check if another user was already present in the room
-      if (Array.isArray(res.users)) {
-        const otherUser = res.users.find((u) => u.id !== socket.id);
-        if (otherUser) {
-          setPeerName(otherUser.name);
-        }
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      socket.emit('leave-room');
-      socket.off('user-joined', onUserJoined);
-      socket.off('user-left', onUserLeft);
-      socket.off('chat-message', onChatMessage);
-    };
-  }, [roomId, name, navigate]);
-
-  const handleSendMessage = (text) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    socket.emit('chat-message', { text: trimmed });
-  };
 
   const handleCopy = () => {
     if (navigator?.clipboard?.writeText && roomId) {
@@ -102,6 +36,33 @@ export default function Room() {
     }
   };
 
+  // Error state (e.g. Camera/mic permissions blocked)
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
+          <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mx-auto mb-4">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">{error}</h2>
+          <p className="text-sm text-slate-500 mb-6">
+            Please allow access to your camera and microphone in browser settings to join the call.
+          </p>
+          <button
+            type="button"
+            onClick={leave}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-black text-white font-medium text-xs transition shadow"
+          >
+            Go Back Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Connecting / Joining state
   if (!isJoined) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
@@ -110,7 +71,7 @@ export default function Room() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span>Joining room {roomId}...</span>
+          <span>Starting camera & joining room {roomId}...</span>
         </div>
       </div>
     );
@@ -118,7 +79,7 @@ export default function Room() {
 
   return (
     <div className="flex-1 flex flex-col p-4 max-w-6xl w-full mx-auto gap-4">
-      {/* Header with Room ID + Copy Button + Leave */}
+      {/* Header with Room ID + Copy Button + User */}
       <div className="bg-white rounded-xl border border-slate-200/80 px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <span className="text-sm text-slate-500 font-medium">Room ID:</span>
@@ -150,13 +111,13 @@ export default function Room() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+          <span className="text-xs text-slate-500 font-medium">
             You: <strong className="text-slate-800">{name}</strong>
           </span>
           <button
             type="button"
-            id="leave-room-btn"
-            onClick={() => navigate('/')}
+            id="header-leave-btn"
+            onClick={leave}
             className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-medium text-xs transition shadow-sm"
           >
             Leave
@@ -164,22 +125,24 @@ export default function Room() {
         </div>
       </div>
 
-      {/* Main Area: Video Area + Chat Panel */}
+      {/* Main Area: Video Area (with Controls & Local overlay) + Chat Panel */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[460px]">
         {/* Video Area (2 cols on large screen) */}
-        <div className="lg:col-span-2 relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center min-h-[340px] shadow-sm">
-          {/* Remote Video Tile Placeholder */}
+        <div className="lg:col-span-2 relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center min-h-[380px] shadow-sm">
+          {/* Remote Video Tile / Presence Placeholder */}
           <div className="text-center p-6">
             {peerName ? (
               <div className="flex flex-col items-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-2xl">
+                <div className="w-16 h-16 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-2xl shadow">
                   {peerName.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-white tracking-wide">
                     {peerName} is here
                   </h3>
-                  <p className="text-xs text-slate-400 mt-1">Remote video placeholder</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    WebRTC peer connection starts in Step 12
+                  </p>
                 </div>
               </div>
             ) : (
@@ -199,10 +162,27 @@ export default function Room() {
             )}
           </div>
 
-          {/* Local Video Tile Placeholder (bottom-right overlay) */}
-          <div className="absolute bottom-4 right-4 bg-slate-800/90 backdrop-blur border border-slate-700 rounded-xl p-3 shadow-lg flex items-center gap-2 text-slate-200 text-xs font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>Local Video: <strong>{name}</strong></span>
+          {/* Local Video Tile Overlay (bottom-right) */}
+          <div className="absolute bottom-4 right-4 z-10">
+            <VideoTile
+              stream={localStream}
+              name={name}
+              isLocal
+              isMuted={!micOn}
+              isCameraOff={!camOn}
+              className="w-36 h-24 sm:w-48 sm:h-32 shadow-2xl border-2 border-slate-700/80"
+            />
+          </div>
+
+          {/* Floating Media Controls (bottom-center) */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+            <Controls
+              micOn={micOn}
+              camOn={camOn}
+              onToggleMic={toggleMic}
+              onToggleCam={toggleCam}
+              onLeave={leave}
+            />
           </div>
         </div>
 
@@ -210,7 +190,7 @@ export default function Room() {
         <div className="lg:col-span-1 flex flex-col min-h-[380px]">
           <ChatPanel
             messages={messages}
-            onSendMessage={handleSendMessage}
+            onSendMessage={sendMessage}
           />
         </div>
       </div>
