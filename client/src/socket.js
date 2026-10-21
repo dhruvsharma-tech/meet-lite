@@ -1,1 +1,11 @@
-// Shared socket.io-client instance — to be implemented in Step 7
+import { io } from 'socket.io-client';
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+
+export const socket = io(SERVER_URL, {
+  autoConnect: true,
+});
+
+socket.on('connect', () => {
+  console.log('connected');
+});
