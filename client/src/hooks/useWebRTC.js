@@ -237,7 +237,7 @@ export function useWebRTC(roomId, name) {
           socket.off('ice-candidate', onIceCandidate);
           socket.off('chat-message', onChatMessage);
         };
-      } catch (err) {
+      } catch {
         if (!isMounted) return;
         setError('Camera and mic permission needed');
       }

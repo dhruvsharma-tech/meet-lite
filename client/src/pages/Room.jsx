@@ -217,15 +217,15 @@ export default function Room() {
             </div>
           )}
 
-          {/* Local Video Tile Overlay (bottom-right) */}
-          <div className="absolute bottom-4 right-4 z-10">
+          {/* Local Video Tile Overlay (top-right on mobile, bottom-right on sm+) */}
+          <div className="absolute top-3 right-3 sm:top-auto sm:bottom-4 sm:right-4 z-10">
             <VideoTile
               stream={localStream}
               name={name}
               isLocal
               isMuted={!micOn}
               isCameraOff={!camOn}
-              className="w-36 h-24 sm:w-48 sm:h-32 shadow-2xl border-2 border-slate-700/80"
+              className="w-28 h-20 sm:w-48 sm:h-32 shadow-2xl border-2 border-slate-700/80"
             />
           </div>
 

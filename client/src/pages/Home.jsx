@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { socket } from '../socket';
 
@@ -17,7 +17,17 @@ export default function Home() {
 
   const [roomIdInput, setRoomIdInput] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [customError, setCustomError] = useState('');
+
+  // Derive error message from navigation state or local actions
+  const navError = location.state?.error;
+  const getNavErrorMessage = (err) => {
+    if (!err) return '';
+    if (err === 'ROOM_NOT_FOUND') return 'Room not found. Please check the Room ID.';
+    if (err === 'ROOM_FULL') return 'Room is full. Maximum 2 participants allowed.';
+    return typeof err === 'string' ? err : 'Unable to join room.';
+  };
+  const errorMessage = customError || getNavErrorMessage(navError);
 
   // Save name to localStorage on change
   const handleNameChange = (e) => {
@@ -30,32 +40,18 @@ export default function Home() {
     }
   };
 
-  // Check if redirected from Room with an error in navigation state
-  useEffect(() => {
-    if (location.state?.error) {
-      const err = location.state.error;
-      if (err === 'ROOM_NOT_FOUND') {
-        setErrorMessage('Room not found. Please check the Room ID.');
-      } else if (err === 'ROOM_FULL') {
-        setErrorMessage('Room is full. Maximum 2 participants allowed.');
-      } else {
-        setErrorMessage(typeof err === 'string' ? err : 'Unable to join room.');
-      }
-    }
-  }, [location.state]);
-
   // Create room flow
   const handleCreateRoom = () => {
     if (isCreating) return;
     setIsCreating(true);
-    setErrorMessage('');
+    setCustomError('');
 
     socket.emit('create-room', (res) => {
       setIsCreating(false);
       if (res?.ok && res.roomId) {
         navigate(`/room/${res.roomId}`, { state: { name: name.trim() } });
       } else {
-        setErrorMessage('Failed to create room. Please try again.');
+        setCustomError('Failed to create room. Please try again.');
       }
     });
   };
@@ -66,7 +62,7 @@ export default function Home() {
     const cleanId = roomIdInput.trim();
     if (!cleanId) return;
 
-    setErrorMessage('');
+    setCustomError('');
     navigate(`/room/${cleanId}`, { state: { name: name.trim() } });
   };
 
