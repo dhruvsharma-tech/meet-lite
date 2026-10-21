@@ -22,6 +22,20 @@ export function useWebRTC(roomId, name) {
   const pcRef = useRef(null);
   const iceCandidatesQueue = useRef([]);
 
+  // Cleanly close and nullify peer connection, remote stream, and queued candidates
+  const closePeerConnection = useCallback(() => {
+    if (pcRef.current) {
+      pcRef.current.onicecandidate = null;
+      pcRef.current.ontrack = null;
+      pcRef.current.onconnectionstatechange = null;
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    iceCandidatesQueue.current = [];
+    setRemoteStream(null);
+    setStatus('idle');
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     let streamInstance = null;
@@ -38,11 +52,9 @@ export function useWebRTC(roomId, name) {
       }
     }
 
-    // Helper: Create and configure RTCPeerConnection
+    // Helper: Create a fresh RTCPeerConnection and bind handlers
     function createPeerConnection(stream) {
-      if (pcRef.current) {
-        pcRef.current.close();
-      }
+      closePeerConnection();
 
       const pc = new RTCPeerConnection(RTC_CONFIG);
       pcRef.current = pc;
@@ -69,7 +81,7 @@ export function useWebRTC(roomId, name) {
         }
       };
 
-      // Connection status tracking
+      // Track connection state
       pc.onconnectionstatechange = () => {
         if (isMounted) {
           setStatus(pc.connectionState);
@@ -96,7 +108,7 @@ export function useWebRTC(roomId, name) {
         setLocalStream(stream);
 
         // 2. Setup socket listeners
-        // Existing user receives user-joined -> creates offer
+        // Existing user receives user-joined -> creates fresh offer
         const onUserJoined = async ({ name: joinedName }) => {
           if (!isMounted) return;
           setPeerName(joinedName);
@@ -120,8 +132,10 @@ export function useWebRTC(roomId, name) {
           }
         };
 
+        // User left -> clean up peer connection, reset remote stream, and go back to waiting state
         const onUserLeft = ({ name: leftName } = {}) => {
           if (!isMounted) return;
+          closePeerConnection();
           setPeerName((current) => {
             const displayName = leftName || current || 'User';
             setMessages((prev) => [
@@ -137,14 +151,11 @@ export function useWebRTC(roomId, name) {
           });
         };
 
-        // Second user receives offer -> sets remote, creates answer
+        // Received offer -> creates fresh peer connection, sets remote, and answers
         const onOffer = async ({ sdp }) => {
           if (!isMounted) return;
           try {
-            let pc = pcRef.current;
-            if (!pc) {
-              pc = createPeerConnection(streamInstance);
-            }
+            const pc = createPeerConnection(streamInstance);
 
             await pc.setRemoteDescription(new RTCSessionDescription(sdp));
             await flushQueuedCandidates(pc);
@@ -157,7 +168,7 @@ export function useWebRTC(roomId, name) {
           }
         };
 
-        // First user receives answer -> sets remote
+        // Received answer -> sets remote description
         const onAnswer = async ({ sdp }) => {
           if (!isMounted) return;
           try {
@@ -171,7 +182,7 @@ export function useWebRTC(roomId, name) {
           }
         };
 
-        // ICE candidate relay
+        // Relay ICE candidate
         const onIceCandidate = async ({ candidate }) => {
           if (!isMounted) return;
           try {
@@ -216,35 +227,48 @@ export function useWebRTC(roomId, name) {
             }
           }
         });
+
+        // Store handlers for unmount cleanup
+        return () => {
+          socket.off('user-joined', onUserJoined);
+          socket.off('user-left', onUserLeft);
+          socket.off('offer', onOffer);
+          socket.off('answer', onAnswer);
+          socket.off('ice-candidate', onIceCandidate);
+          socket.off('chat-message', onChatMessage);
+        };
       } catch (err) {
         if (!isMounted) return;
         setError('Camera and mic permission needed');
       }
     }
 
-    initCall();
+    let cleanupListeners = null;
+    initCall().then((cleanup) => {
+      cleanupListeners = cleanup;
+    });
 
     return () => {
       isMounted = false;
       socket.emit('leave-room');
-      socket.off('user-joined');
-      socket.off('user-left');
-      socket.off('offer');
-      socket.off('answer');
-      socket.off('ice-candidate');
-      socket.off('chat-message');
-
-      if (pcRef.current) {
-        pcRef.current.close();
-        pcRef.current = null;
+      if (typeof cleanupListeners === 'function') {
+        cleanupListeners();
+      } else {
+        socket.off('user-joined');
+        socket.off('user-left');
+        socket.off('offer');
+        socket.off('answer');
+        socket.off('ice-candidate');
+        socket.off('chat-message');
       }
-      iceCandidatesQueue.current = [];
+
+      closePeerConnection();
 
       if (streamInstance) {
         streamInstance.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [roomId, name, navigate]);
+  }, [roomId, name, navigate, closePeerConnection]);
 
   const toggleMic = useCallback(() => {
     if (!localStream) return;
@@ -266,16 +290,12 @@ export function useWebRTC(roomId, name) {
 
   const leave = useCallback(() => {
     socket.emit('leave-room');
-    if (pcRef.current) {
-      pcRef.current.close();
-      pcRef.current = null;
-    }
-    iceCandidatesQueue.current = [];
+    closePeerConnection();
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
     }
     navigate('/');
-  }, [localStream, navigate]);
+  }, [localStream, navigate, closePeerConnection]);
 
   const sendMessage = useCallback((text) => {
     const trimmed = text.trim();
