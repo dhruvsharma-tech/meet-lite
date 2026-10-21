@@ -137,10 +137,3 @@ npm run dev
 
 ---
 
-## Interview Talking Points
-
-- *"I built the signaling server with Socket.IO, while media streams directly peer-to-peer via WebRTC."*
-- *"The existing room participant creates the offer, the joining participant answers, and both exchange ICE candidates via the server relay."*
-- *"I queued early-arriving ICE candidates until `setRemoteDescription` completed to avoid SDP race conditions."*
-- *"Local media tracks are enabled/disabled via `track.enabled` rather than stopping them, ensuring instant camera and mic resumption."*
-- *"I disabled React 18 `StrictMode` on the client to prevent double-invoking media device requests and socket listeners during development."*
