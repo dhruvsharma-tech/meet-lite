@@ -65,6 +65,34 @@ export function registerSocketHandlers(io) {
       }
     });
 
+    // chat-message: validate text and broadcast to room including sender
+    socket.on('chat-message', (data) => {
+      try {
+        const text = data?.text;
+        if (typeof text !== 'string') return;
+        const trimmed = text.trim();
+        if (!trimmed || trimmed.length > 500) return;
+
+        const found = findRoomBySocket(socket.id);
+        if (!found) return;
+
+        const { roomId, room } = found;
+        const user = room.users.get(socket.id);
+        const name = user?.name || 'Guest';
+
+        room.lastActive = Date.now();
+
+        io.to(roomId).emit('chat-message', {
+          id: socket.id,
+          name,
+          text: trimmed,
+          time: Date.now(),
+        });
+      } catch (err) {
+        // Ignore errors gracefully
+      }
+    });
+
     // leave-room: explicit leave button
     socket.on('leave-room', () => {
       handleLeave(socket, io);

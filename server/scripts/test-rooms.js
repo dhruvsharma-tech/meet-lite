@@ -1,4 +1,4 @@
-// Temporary test script — verifies create/join/full/not-found flows
+// Temporary test script — verifies create/join/full/not-found/chat flows
 // Run with: node scripts/test-rooms.js (server must be running on port 5000)
 import { io } from 'socket.io-client';
 
@@ -25,7 +25,7 @@ function waitFor(socket, event) {
 }
 
 async function run() {
-  console.log('\n--- Room tests ---\n');
+  console.log('\n--- Room & Chat tests ---\n');
 
   const clientA = connect();
   const clientB = connect();
@@ -62,7 +62,34 @@ async function run() {
   const joinFake = await new Promise((r) => clientC.emit('join-room', { roomId: 'fakeid!', name: 'X' }, r));
   assert('fake roomId gets ROOM_NOT_FOUND', joinFake.ok === false && joinFake.error === 'ROOM_NOT_FOUND');
 
-  // Test 6: B leaves — A receives user-left
+  // Test 6: Chat message broadcast to everyone including sender
+  const chatPromiseA = waitFor(clientA, 'chat-message');
+  const chatPromiseB = waitFor(clientB, 'chat-message');
+  clientA.emit('chat-message', { text: 'Hello Bob!' });
+  const [msgA, msgB] = await Promise.all([chatPromiseA, chatPromiseB]);
+
+  assert(
+    'client A receives own chat-message',
+    msgA && msgA.text === 'Hello Bob!' && msgA.name === 'Alice' && msgA.id === clientA.id && typeof msgA.time === 'number'
+  );
+  assert(
+    'client B receives chat-message from A',
+    msgB && msgB.text === 'Hello Bob!' && msgB.name === 'Alice' && msgB.id === clientA.id && typeof msgB.time === 'number'
+  );
+
+  // Test 7: Empty or whitespace chat-message is ignored
+  let emptyReceived = false;
+  const onEmptyMessage = () => { emptyReceived = true; };
+  clientA.on('chat-message', onEmptyMessage);
+  clientB.on('chat-message', onEmptyMessage);
+  clientA.emit('chat-message', { text: '   ' });
+  clientA.emit('chat-message', { text: '' });
+  await new Promise((r) => setTimeout(r, 200));
+  clientA.off('chat-message', onEmptyMessage);
+  clientB.off('chat-message', onEmptyMessage);
+  assert('empty chat-message is ignored', emptyReceived === false);
+
+  // Test 8: B leaves — A receives user-left
   const userLeftPromise = waitFor(clientA, 'user-left');
   clientB.emit('leave-room');
   const left = await userLeftPromise;
