@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { socket } from '../socket';
+import ChatPanel from '../components/ChatPanel';
 
 export default function Room() {
   const { roomId } = useParams();
@@ -12,20 +13,50 @@ export default function Room() {
   const [isJoined, setIsJoined] = useState(false);
   const [peerName, setPeerName] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [messages, setMessages] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
 
     const onUserJoined = ({ name: joinedName }) => {
-      if (isMounted) setPeerName(joinedName);
+      if (!isMounted) return;
+      setPeerName(joinedName);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `sys-${Date.now()}-${Math.random()}`,
+          type: 'system',
+          text: `${joinedName} joined`,
+          time: Date.now(),
+        },
+      ]);
     };
 
-    const onUserLeft = () => {
-      if (isMounted) setPeerName(null);
+    const onUserLeft = ({ name: leftName } = {}) => {
+      if (!isMounted) return;
+      setPeerName((currentPeer) => {
+        const displayName = leftName || currentPeer || 'User';
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `sys-${Date.now()}-${Math.random()}`,
+            type: 'system',
+            text: `${displayName} left`,
+            time: Date.now(),
+          },
+        ]);
+        return null;
+      });
+    };
+
+    const onChatMessage = (msg) => {
+      if (!isMounted) return;
+      setMessages((prev) => [...prev, msg]);
     };
 
     socket.on('user-joined', onUserJoined);
     socket.on('user-left', onUserLeft);
+    socket.on('chat-message', onChatMessage);
 
     // Join room
     socket.emit('join-room', { roomId, name }, (res) => {
@@ -52,8 +83,15 @@ export default function Room() {
       socket.emit('leave-room');
       socket.off('user-joined', onUserJoined);
       socket.off('user-left', onUserLeft);
+      socket.off('chat-message', onChatMessage);
     };
   }, [roomId, name, navigate]);
+
+  const handleSendMessage = (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    socket.emit('chat-message', { text: trimmed });
+  };
 
   const handleCopy = () => {
     if (navigator?.clipboard?.writeText && roomId) {
@@ -126,7 +164,7 @@ export default function Room() {
         </div>
       </div>
 
-      {/* Main Area: Video Area + Chat Placeholder */}
+      {/* Main Area: Video Area + Chat Panel */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[460px]">
         {/* Video Area (2 cols on large screen) */}
         <div className="lg:col-span-2 relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center min-h-[340px] shadow-sm">
@@ -168,37 +206,12 @@ export default function Room() {
           </div>
         </div>
 
-        {/* Chat Placeholder (1 col on large screen) */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm flex flex-col justify-between min-h-[300px]">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <h3 className="font-semibold text-slate-800 text-sm flex items-center gap-2">
-                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                <span>Room Chat</span>
-              </h3>
-              <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-                Step 10
-              </span>
-            </div>
-
-            <div className="text-center py-12 text-slate-400 text-xs flex flex-col items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400">
-                💬
-              </div>
-              <span>Chat panel placeholder</span>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-100 pt-3">
-            <input
-              type="text"
-              disabled
-              placeholder="Chat will be available in Step 10..."
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 text-xs cursor-not-allowed"
-            />
-          </div>
+        {/* Chat Panel (1 col on large screen) */}
+        <div className="lg:col-span-1 flex flex-col min-h-[380px]">
+          <ChatPanel
+            messages={messages}
+            onSendMessage={handleSendMessage}
+          />
         </div>
       </div>
     </div>
