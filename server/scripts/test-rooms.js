@@ -1,4 +1,4 @@
-// Temporary test script — verifies create/join/full/not-found/chat flows
+// Test script — verifies create/join/full/not-found/chat/signaling flows
 // Run with: node scripts/test-rooms.js (server must be running on port 5000)
 import { io } from 'socket.io-client';
 
@@ -25,7 +25,7 @@ function waitFor(socket, event) {
 }
 
 async function run() {
-  console.log('\n--- Room & Chat tests ---\n');
+  console.log('\n--- Room, Chat & WebRTC Signaling tests ---\n');
 
   const clientA = connect();
   const clientB = connect();
@@ -89,7 +89,37 @@ async function run() {
   clientB.off('chat-message', onEmptyMessage);
   assert('empty chat-message is ignored', emptyReceived === false);
 
-  // Test 8: B leaves — A receives user-left
+  // Test 8: Offer relay (A sends offer -> B receives with from: A.id)
+  const offerPromiseB = waitFor(clientB, 'offer');
+  const dummyOffer = { type: 'offer', sdp: 'v=0 dummy offer sdp' };
+  clientA.emit('offer', { sdp: dummyOffer });
+  const offerReceived = await offerPromiseB;
+  assert(
+    'client B receives offer with right from and sdp',
+    offerReceived && offerReceived.from === clientA.id && offerReceived.sdp?.sdp === dummyOffer.sdp
+  );
+
+  // Test 9: Answer relay (B sends answer -> A receives with from: B.id)
+  const answerPromiseA = waitFor(clientA, 'answer');
+  const dummyAnswer = { type: 'answer', sdp: 'v=0 dummy answer sdp' };
+  clientB.emit('answer', { sdp: dummyAnswer });
+  const answerReceived = await answerPromiseA;
+  assert(
+    'client A receives answer with right from and sdp',
+    answerReceived && answerReceived.from === clientB.id && answerReceived.sdp?.sdp === dummyAnswer.sdp
+  );
+
+  // Test 10: ICE candidate relay (A sends candidate -> B receives with from: A.id)
+  const icePromiseB = waitFor(clientB, 'ice-candidate');
+  const dummyCandidate = { candidate: 'candidate:dummy', sdpMid: '0', sdpMLineIndex: 0 };
+  clientA.emit('ice-candidate', { candidate: dummyCandidate });
+  const iceReceived = await icePromiseB;
+  assert(
+    'client B receives ice-candidate with right from and candidate',
+    iceReceived && iceReceived.from === clientA.id && iceReceived.candidate?.candidate === dummyCandidate.candidate
+  );
+
+  // Test 11: B leaves — A receives user-left
   const userLeftPromise = waitFor(clientA, 'user-left');
   clientB.emit('leave-room');
   const left = await userLeftPromise;

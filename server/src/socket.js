@@ -93,6 +93,54 @@ export function registerSocketHandlers(io) {
       }
     });
 
+    // offer: forward sdp to the other user in the room
+    socket.on('offer', (data) => {
+      try {
+        if (!data || !data.sdp) return;
+        const found = findRoomBySocket(socket.id);
+        if (!found) return;
+
+        socket.to(found.roomId).emit('offer', {
+          sdp: data.sdp,
+          from: socket.id,
+        });
+      } catch (err) {
+        // Ignore errors gracefully
+      }
+    });
+
+    // answer: forward sdp to the other user in the room
+    socket.on('answer', (data) => {
+      try {
+        if (!data || !data.sdp) return;
+        const found = findRoomBySocket(socket.id);
+        if (!found) return;
+
+        socket.to(found.roomId).emit('answer', {
+          sdp: data.sdp,
+          from: socket.id,
+        });
+      } catch (err) {
+        // Ignore errors gracefully
+      }
+    });
+
+    // ice-candidate: forward candidate to the other user in the room
+    socket.on('ice-candidate', (data) => {
+      try {
+        if (!data || !data.candidate) return;
+        const found = findRoomBySocket(socket.id);
+        if (!found) return;
+
+        socket.to(found.roomId).emit('ice-candidate', {
+          candidate: data.candidate,
+          from: socket.id,
+        });
+      } catch (err) {
+        // Ignore errors gracefully
+      }
+    });
+
     // leave-room: explicit leave button
     socket.on('leave-room', () => {
       handleLeave(socket, io);
