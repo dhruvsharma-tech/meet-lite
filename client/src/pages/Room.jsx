@@ -13,6 +13,7 @@ export default function Room() {
 
   const {
     localStream,
+    remoteStream,
     peerName,
     messages,
     sendMessage,
@@ -23,6 +24,7 @@ export default function Room() {
     leave,
     error,
     isJoined,
+    status,
   } = useWebRTC(roomId, name);
 
   const [copied, setCopied] = useState(false);
@@ -79,7 +81,7 @@ export default function Room() {
 
   return (
     <div className="flex-1 flex flex-col p-4 max-w-6xl w-full mx-auto gap-4">
-      {/* Header with Room ID + Copy Button + User */}
+      {/* Header with Room ID + Copy Button + User + Status */}
       <div className="bg-white rounded-xl border border-slate-200/80 px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <span className="text-sm text-slate-500 font-medium">Room ID:</span>
@@ -108,6 +110,25 @@ export default function Room() {
               </>
             )}
           </button>
+
+          {/* Call Connection Status */}
+          {status !== 'idle' && (
+            <span
+              className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
+                status === 'connected'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : status === 'connecting'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-rose-50 text-rose-700 border-rose-200'
+              }`}
+            >
+              {status === 'connected'
+                ? 'Call Connected'
+                : status === 'connecting'
+                ? 'Connecting call...'
+                : status}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -129,38 +150,49 @@ export default function Room() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[460px]">
         {/* Video Area (2 cols on large screen) */}
         <div className="lg:col-span-2 relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center min-h-[380px] shadow-sm">
-          {/* Remote Video Tile / Presence Placeholder */}
-          <div className="text-center p-6">
-            {peerName ? (
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-2xl shadow">
-                  {peerName.charAt(0).toUpperCase()}
+          {/* Remote Video Tile (Large) or Waiting / Presence Placeholder */}
+          {remoteStream ? (
+            <VideoTile
+              stream={remoteStream}
+              name={peerName || 'Remote Peer'}
+              isLocal={false}
+              className="w-full h-full min-h-[380px]"
+            />
+          ) : (
+            <div className="text-center p-6">
+              {peerName ? (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 flex items-center justify-center font-bold text-2xl shadow">
+                    {peerName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white tracking-wide">
+                      {peerName} is here
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {status === 'connecting'
+                        ? 'Establishing video connection...'
+                        : 'Waiting for remote media stream...'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white tracking-wide">
-                    {peerName} is here
+              ) : (
+                <div className="flex flex-col items-center gap-3 max-w-sm">
+                  <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
+                    <svg className="w-6 h-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-medium text-slate-200">
+                    Waiting for someone to join. Share the room ID.
                   </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    WebRTC peer connection starts in Step 12
+                  <p className="text-xs text-slate-500">
+                    Send the 8-digit Room ID to invite another participant.
                   </p>
                 </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 max-w-sm">
-                <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
-                  <svg className="w-6 h-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-base font-medium text-slate-200">
-                  Waiting for someone to join. Share the room ID.
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Send the 8-digit Room ID to invite another participant.
-                </p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Local Video Tile Overlay (bottom-right) */}
           <div className="absolute bottom-4 right-4 z-10">
