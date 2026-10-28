@@ -4,10 +4,15 @@ import { useChatStore } from '../../store/chatStore';
 import messageService from '../../services/messageService';
 import MessageItem from './MessageItem';
 
+const EMPTY_MESSAGES = [];
+
 export default function MessageList({ channelId, channelName }) {
-  const messages = useChatStore((state) => state.messages[channelId] || []);
-  const hasMore = useChatStore((state) => state.hasMore[channelId] || false);
-  const nextCursor = useChatStore((state) => state.nextCursors[channelId] || null);
+  // Stable selectors to avoid React 19 getSnapshot infinite loop
+  const rawMessages = useChatStore((state) => state.messages[channelId]);
+  const messages = rawMessages || EMPTY_MESSAGES;
+
+  const hasMore = useChatStore((state) => Boolean(state.hasMore[channelId]));
+  const nextCursor = useChatStore((state) => state.nextCursors[channelId] ?? null);
   const setMessages = useChatStore((state) => state.setMessages);
   const prependMessages = useChatStore((state) => state.prependMessages);
 
@@ -30,7 +35,7 @@ export default function MessageList({ channelId, channelName }) {
 
         // Backend returns newest first; reverse so oldest is at the top of the chat view
         const chronological = (data.messages || []).reverse();
-        setMessages(channelId, chronological, !!data.nextCursor, data.nextCursor);
+        setMessages(channelId, chronological, Boolean(data.nextCursor), data.nextCursor);
       } catch (err) {
         console.error('Failed to load message history:', err);
       } finally {
@@ -67,7 +72,7 @@ export default function MessageList({ channelId, channelName }) {
         prependMessages(
           channelId,
           olderChronological,
-          !!data.nextCursor,
+          Boolean(data.nextCursor),
           data.nextCursor
         );
 

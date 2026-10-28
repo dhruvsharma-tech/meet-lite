@@ -1,7 +1,10 @@
 import { useChatStore } from '../../store/chatStore';
 
+const EMPTY_TYPING = [];
+
 export default function TypingIndicator({ channelId }) {
-  const typingUsers = useChatStore((state) => state.typingUsers[channelId] || []);
+  const rawTyping = useChatStore((state) => state.typingUsers[channelId]);
+  const typingUsers = rawTyping || EMPTY_TYPING;
 
   if (typingUsers.length === 0) {
     return <div className="h-6" />;
