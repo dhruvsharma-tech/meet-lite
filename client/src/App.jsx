@@ -1,28 +1,88 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { useAuthStore } from './store/authStore';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import AppPage from './pages/AppPage';
 import Home from './pages/Home';
 import Room from './pages/Room';
-import './socket'; // Initialize socket connection and listener
 
 export default function App() {
+  const fetchMe = useAuthStore((state) => state.fetchMe);
+
+  useEffect(() => {
+    fetchMe();
+  }, [fetchMe]);
+
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-        <header className="border-b border-slate-200 bg-white/80 backdrop-blur px-4 py-3 sticky top-0 z-10">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
-            <span className="font-bold text-lg text-indigo-600 tracking-tight">Meet Lite</span>
-            <span className="text-xs text-slate-500 font-medium px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200">
-              P2P Call
-            </span>
-          </div>
-        </header>
-        <main className="flex-1 flex flex-col max-w-5xl w-full mx-auto">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/room/:roomId" element={<Room />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#2b2d31',
+            color: '#f2f3f5',
+            border: '1px solid #1e1f22',
+            fontSize: '13px',
+          },
+          success: {
+            iconTheme: {
+              primary: '#23a55a',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#f23f42',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+
+      <Routes>
+        {/* Public Auth Routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* Protected App Routes */}
+        <Route
+          path="/app"
+          element={
+            <ProtectedRoute>
+              <AppPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/app/:serverId"
+          element={
+            <ProtectedRoute>
+              <AppPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/app/:serverId/:channelId"
+          element={
+            <ProtectedRoute>
+              <AppPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Root Redirects to /app (which redirects to /login if unauthenticated) */}
+        <Route path="/" element={<Navigate to="/app" replace />} />
+
+        {/* Legacy P2P Routes (preserved until Step 12) */}
+        <Route path="/legacy" element={<Home />} />
+        <Route path="/room/:roomId" element={<Room />} />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/app" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }
