@@ -4,6 +4,8 @@ import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import { initPassport } from './config/passport.js';
 import authRouter from './routes/auth.routes.js';
+import serverRouter from './routes/server.routes.js';
+import channelRouter from './routes/channel.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -54,10 +56,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRouter);
 
 // Step 5: Servers & Channels
-// import serverRouter from './routes/server.routes.js';
-// import channelRouter from './routes/channel.routes.js';
-// app.use('/api/servers', serverRouter);
-// app.use('/api/channels', channelRouter);
+app.use('/api/servers', serverRouter);
+app.use('/api/servers/:serverId/channels', channelRouter);
 
 // Step 9: Invites & Members
 // import inviteRouter from './routes/invite.routes.js';
