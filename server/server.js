@@ -11,10 +11,15 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 // Create HTTP server from Express app
 const httpServer = createServer(app);
 
-// Attach Socket.IO — CORS must match Express CORS exactly
+// Attach Socket.IO — flexible CORS in dev
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin) || origin === CLIENT_URL) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
     methods: ['GET', 'POST'],
   },
