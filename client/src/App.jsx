@@ -7,8 +7,6 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AppPage from './pages/AppPage';
 import InvitePage from './pages/InvitePage';
-import Home from './pages/Home';
-import Room from './pages/Room';
 
 export default function App() {
   const fetchMe = useAuthStore((state) => state.fetchMe);
@@ -79,10 +77,6 @@ export default function App() {
 
         {/* Root Redirects to /app (which redirects to /login if unauthenticated) */}
         <Route path="/" element={<Navigate to="/app" replace />} />
-
-        {/* Legacy P2P Routes (preserved until Step 12) */}
-        <Route path="/legacy" element={<Home />} />
-        <Route path="/room/:roomId" element={<Room />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/app" replace />} />

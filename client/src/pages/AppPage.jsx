@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Volume2, MessageSquare, Plus, Compass } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useServerStore } from '../store/serverStore';
 import { useUIStore } from '../store/uiStore';
 import serverService from '../services/serverService';
@@ -59,6 +60,8 @@ export default function AppPage() {
         }
       } catch (err) {
         console.error('Failed to load server details:', err);
+        toast.error(err.response?.data?.message || 'Failed to load server');
+        navigate('/app', { replace: true });
       } finally {
         setIsLoading(false);
       }

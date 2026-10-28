@@ -3,7 +3,6 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import app from './src/app.js';
 import { initSocketIO } from './src/socket/index.js';
-import { startRoomCleanup } from './src/rooms.js';
 
 const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -27,9 +26,6 @@ const io = new Server(httpServer, {
 
 // Initialize modern Socket.IO auth & handlers
 initSocketIO(io);
-
-// Start periodic cleanup of empty rooms (legacy P2P — deprecated in Step 12)
-startRoomCleanup();
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

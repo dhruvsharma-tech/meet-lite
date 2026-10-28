@@ -37,3 +37,4 @@ export default function ParticipantGrid() {
     </div>
   );
 }
+
