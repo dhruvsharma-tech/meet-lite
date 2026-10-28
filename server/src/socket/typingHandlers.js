@@ -23,3 +23,4 @@ export function registerTypingHandlers(io, socket) {
     });
   });
 }
+

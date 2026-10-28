@@ -1,11 +1,39 @@
 import { io } from 'socket.io-client';
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:5000';
 
-export const socket = io(SERVER_URL, {
-  autoConnect: true,
+// Singleton Socket.IO instance configured with credentials (cookies)
+export const socket = io(SOCKET_URL, {
+  withCredentials: true,
+  autoConnect: false,
+  transports: ['websocket', 'polling'],
 });
+
+export function connectSocket() {
+  if (!socket.connected) {
+    socket.connect();
+  }
+}
+
+export function disconnectSocket() {
+  if (socket.connected) {
+    socket.disconnect();
+  }
+}
 
 socket.on('connect', () => {
-  console.log('connected');
+  console.log('[Socket] Connected to real-time server with ID:', socket.id);
 });
+
+socket.on('disconnect', (reason) => {
+  console.log('[Socket] Disconnected:', reason);
+});
+
+socket.on('connect_error', (err) => {
+  console.warn('[Socket] Connection error:', err.message);
+});
+
+export default socket;

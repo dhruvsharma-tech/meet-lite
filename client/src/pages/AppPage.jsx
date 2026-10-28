@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Hash, Volume2, MessageSquare, Plus, Compass } from 'lucide-react';
+import { Volume2, MessageSquare, Plus, Compass } from 'lucide-react';
 import { useServerStore } from '../store/serverStore';
 import { useUIStore } from '../store/uiStore';
 import serverService from '../services/serverService';
@@ -8,6 +8,7 @@ import ServerList from '../components/server/ServerList';
 import ChannelSidebar from '../components/channel/ChannelSidebar';
 import CreateServerModal from '../components/server/CreateServerModal';
 import CreateChannelModal from '../components/channel/CreateChannelModal';
+import ChatPanel from '../components/chat/ChatPanel';
 
 export default function AppPage() {
   const { serverId, channelId } = useParams();
@@ -105,43 +106,35 @@ export default function AppPage() {
               Pick a text or voice channel from the sidebar on the left to start chatting!
             </p>
           </div>
+        ) : activeChannel.type === 'TEXT' ? (
+          /* State C: TEXT Channel -> ChatPanel */
+          <ChatPanel
+            key={activeChannel.id}
+            channelId={activeChannel.id}
+            channelName={activeChannel.name}
+          />
         ) : (
-          /* State C: Channel Selected (Text or Voice) */
+          /* State D: VOICE Channel -> Placeholder ready for Step 11 LiveKit */
           <div className="flex-1 flex flex-col h-full overflow-hidden">
-            {/* Channel Top Header Bar */}
             <header className="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between shrink-0 shadow-xs bg-[#313338]">
               <div className="flex items-center gap-2 text-white font-semibold text-sm">
-                {activeChannel.type === 'VOICE' ? (
-                  <Volume2 className="w-5 h-5 text-[#80848e]" />
-                ) : (
-                  <Hash className="w-5 h-5 text-[#80848e]" />
-                )}
+                <Volume2 className="w-5 h-5 text-[#80848e]" />
                 <span>{activeChannel.name}</span>
                 <span className="text-xs text-[#80848e] font-normal ml-2 hidden sm:inline">
-                  {activeChannel.type === 'VOICE'
-                    ? 'Voice & Video Channel'
-                    : 'Text Channel'}
+                  Voice & Video Channel
                 </span>
               </div>
             </header>
 
-            {/* Main Channel View Content (Ready for Step 8 & Step 11) */}
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#313338]">
               <div className="w-16 h-16 rounded-2xl bg-[#2b2d31] flex items-center justify-center text-[#5865f2] mb-4 shadow-sm">
-                {activeChannel.type === 'VOICE' ? (
-                  <Volume2 className="w-8 h-8" />
-                ) : (
-                  <Hash className="w-8 h-8" />
-                )}
+                <Volume2 className="w-8 h-8" />
               </div>
               <h2 className="text-2xl font-bold text-white mb-1">
-                Welcome to #{activeChannel.name}!
+                🔊 #{activeChannel.name}
               </h2>
               <p className="text-sm text-[#b5bac1] max-w-md">
-                This is the start of the #{activeChannel.name} channel.
-                {activeChannel.type === 'VOICE'
-                  ? ' Multi-user LiveKit SFU voice & video will be wired in Step 11.'
-                  : ' Real-time persistent Socket.IO chat will be wired in Step 8.'}
+                Voice channel ready! LiveKit SFU multi-party video, audio, and screen sharing will be wired in Step 11.
               </p>
             </div>
           </div>

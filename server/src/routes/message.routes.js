@@ -11,3 +11,4 @@ router.use(authMiddleware);
 router.get('/:channelId/messages', getMessages);
 
 export default router;
+
