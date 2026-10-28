@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../prisma.js';
 import { registerChatHandlers } from './chatHandlers.js';
 import { registerTypingHandlers } from './typingHandlers.js';
+import { registerPresenceHandlers } from './presenceHandlers.js';
 import {
   createRoom,
   getRoom,
@@ -76,9 +77,10 @@ export function initSocketIO(io) {
       }
     });
 
-    // Register Chat & Typing Handlers
+    // Register Chat, Typing & Presence Handlers
     registerChatHandlers(io, socket);
     registerTypingHandlers(io, socket);
+    registerPresenceHandlers(io, socket);
 
     // ─── Legacy Meet-Lite 1-on-1 P2P Handlers (preserved until Step 12) ──────
     socket.on('create-room', (cb) => {

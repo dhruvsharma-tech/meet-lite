@@ -2,12 +2,14 @@ import { useEffect, useRef, useCallback } from 'react';
 import socket, { connectSocket } from '../socket';
 import { useChatStore } from '../store/chatStore';
 import { useAuthStore } from '../store/authStore';
+import { useServerStore } from '../store/serverStore';
 
 export function useSocket(channelId) {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const addMessage = useChatStore((state) => state.addMessage);
   const setTypingUser = useChatStore((state) => state.setTypingUser);
+  const updateMemberPresence = useServerStore((state) => state.updateMemberPresence);
 
   const typingTimeoutRef = useRef(null);
   const isTypingRef = useRef(false);
@@ -45,10 +47,17 @@ export function useSocket(channelId) {
     socket.on('message:new', handleNewMessage);
     socket.on('typing:update', handleTypingUpdate);
 
+    // Presence updates from server
+    const handlePresenceUpdate = ({ userId, status }) => {
+      updateMemberPresence(userId, status);
+    };
+    socket.on('presence:update', handlePresenceUpdate);
+
     return () => {
       socket.emit('channel:leave', { channelId });
       socket.off('message:new', handleNewMessage);
       socket.off('typing:update', handleTypingUpdate);
+      socket.off('presence:update', handlePresenceUpdate);
 
       // Stop typing if leaving channel
       if (isTypingRef.current) {
@@ -59,7 +68,7 @@ export function useSocket(channelId) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [channelId, user?.id, addMessage, setTypingUser]);
+  }, [channelId, user?.id, addMessage, setTypingUser, updateMemberPresence]);
 
   // Send message helper
   const sendMessage = useCallback(

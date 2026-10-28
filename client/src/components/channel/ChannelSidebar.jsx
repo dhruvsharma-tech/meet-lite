@@ -5,9 +5,7 @@ import {
   Plus,
   LogOut,
   Trash2,
-  UserPlus,
-  Mic,
-  Settings,
+  Link,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServerStore } from '../../store/serverStore';
@@ -15,6 +13,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import serverService from '../../services/serverService';
 import channelService from '../../services/channelService';
+import api from '../../services/api';
 import ChannelItem from './ChannelItem';
 
 export default function ChannelSidebar() {
@@ -86,6 +85,18 @@ export default function ChannelSidebar() {
     navigate('/login');
   };
 
+  const handleCopyInvite = async () => {
+    setIsDropdownOpen(false);
+    try {
+      const res = await api.post(`/api/servers/${serverId}/invites`);
+      const link = `${window.location.origin}/invite/${res.data.code}`;
+      await navigator.clipboard.writeText(link);
+      toast.success('Invite link copied!');
+    } catch {
+      toast.error('Failed to generate invite link');
+    }
+  };
+
   if (!currentServer) return null;
 
   return (
@@ -121,6 +132,14 @@ export default function ChannelSidebar() {
               >
                 <span>Create Channel</span>
                 <Plus className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={handleCopyInvite}
+                className="w-full text-left px-2.5 py-2 rounded text-[#949ba4] hover:bg-[#5865f2] hover:text-white flex items-center justify-between cursor-pointer"
+              >
+                <span>Copy Invite Link</span>
+                <Link className="w-4 h-4" />
               </button>
 
               <div className="h-[1px] bg-[#2b2d31] my-1" />

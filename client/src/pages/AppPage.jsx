@@ -9,6 +9,7 @@ import ChannelSidebar from '../components/channel/ChannelSidebar';
 import CreateServerModal from '../components/server/CreateServerModal';
 import CreateChannelModal from '../components/channel/CreateChannelModal';
 import ChatPanel from '../components/chat/ChatPanel';
+import MemberList from '../components/channel/MemberList';
 
 export default function AppPage() {
   const { serverId, channelId } = useParams();
@@ -21,6 +22,7 @@ export default function AppPage() {
   const channels = useServerStore((state) => state.channels);
 
   const setCreateServerOpen = useUIStore((state) => state.setCreateServerOpen);
+  const isMemberListOpen = useUIStore((state) => state.isMemberListOpen);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -107,12 +109,15 @@ export default function AppPage() {
             </p>
           </div>
         ) : activeChannel.type === 'TEXT' ? (
-          /* State C: TEXT Channel -> ChatPanel */
-          <ChatPanel
-            key={activeChannel.id}
-            channelId={activeChannel.id}
-            channelName={activeChannel.name}
-          />
+          /* State C: TEXT Channel -> ChatPanel + MemberList */
+          <>
+            <ChatPanel
+              key={activeChannel.id}
+              channelId={activeChannel.id}
+              channelName={activeChannel.name}
+            />
+            <MemberList serverId={serverId} />
+          </>
         ) : (
           /* State D: VOICE Channel -> Placeholder ready for Step 11 LiveKit */
           <div className="flex-1 flex flex-col h-full overflow-hidden">

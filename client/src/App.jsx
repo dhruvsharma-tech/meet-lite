@@ -6,6 +6,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AppPage from './pages/AppPage';
+import InvitePage from './pages/InvitePage';
 import Home from './pages/Home';
 import Room from './pages/Room';
 
@@ -72,6 +73,9 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Invite Page (public but redirects to login if unauthenticated) */}
+        <Route path="/invite/:code" element={<InvitePage />} />
 
         {/* Root Redirects to /app (which redirects to /login if unauthenticated) */}
         <Route path="/" element={<Navigate to="/app" replace />} />
