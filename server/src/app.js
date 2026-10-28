@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import passport from 'passport';
+import { initPassport } from './config/passport.js';
+import authRouter from './routes/auth.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -19,17 +22,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Initialize Passport & Strategies
+initPassport();
+app.use(passport.initialize());
+
 // ─── Health Check ─────────────────────────────────────────────────────────────
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
 
-// ─── API Routes (stubs — controllers wired in upcoming steps) ─────────────────
+// ─── API Routes ───────────────────────────────────────────────────────────────
 
 // Step 3: Auth
-// import authRouter from './routes/auth.routes.js';
-// app.use('/api/auth', authRouter);
+app.use('/api/auth', authRouter);
 
 // Step 5: Servers & Channels
 // import serverRouter from './routes/server.routes.js';
