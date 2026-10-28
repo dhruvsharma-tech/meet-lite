@@ -10,6 +10,7 @@ import CreateServerModal from '../components/server/CreateServerModal';
 import CreateChannelModal from '../components/channel/CreateChannelModal';
 import ChatPanel from '../components/chat/ChatPanel';
 import MemberList from '../components/channel/MemberList';
+import VoiceRoom from '../components/voice/VoiceRoom';
 
 export default function AppPage() {
   const { serverId, channelId } = useParams();
@@ -119,30 +120,13 @@ export default function AppPage() {
             <MemberList serverId={serverId} />
           </>
         ) : (
-          /* State D: VOICE Channel -> Placeholder ready for Step 11 LiveKit */
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <header className="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between shrink-0 shadow-xs bg-[#313338]">
-              <div className="flex items-center gap-2 text-white font-semibold text-sm">
-                <Volume2 className="w-5 h-5 text-[#80848e]" />
-                <span>{activeChannel.name}</span>
-                <span className="text-xs text-[#80848e] font-normal ml-2 hidden sm:inline">
-                  Voice & Video Channel
-                </span>
-              </div>
-            </header>
-
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#313338]">
-              <div className="w-16 h-16 rounded-2xl bg-[#2b2d31] flex items-center justify-center text-[#5865f2] mb-4 shadow-sm">
-                <Volume2 className="w-8 h-8" />
-              </div>
-              <h2 className="text-2xl font-bold text-white mb-1">
-                🔊 #{activeChannel.name}
-              </h2>
-              <p className="text-sm text-[#b5bac1] max-w-md">
-                Voice channel ready! LiveKit SFU multi-party video, audio, and screen sharing will be wired in Step 11.
-              </p>
-            </div>
-          </div>
+          /* State D: VOICE Channel -> VoiceRoom LiveKit */
+          <VoiceRoom
+            key={activeChannel.id}
+            channelId={activeChannel.id}
+            channelName={activeChannel.name}
+            serverId={serverId}
+          />
         )}
       </main>
 
