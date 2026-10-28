@@ -16,18 +16,18 @@ export default function InvitePage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    api.get(`/api/invites/${code}`)
+      .then((res) => setPreview(res.data.server))
+      .catch(() => setError('Invalid or expired invite link.'))
+      .finally(() => setLoading(false));
+  }, [code]);
+
+  async function handleJoin() {
     if (!isAuthenticated) {
       navigate(`/login?redirect=/invite/${code}`);
       return;
     }
 
-    api.get(`/api/invites/${code}`)
-      .then((res) => setPreview(res.data.server))
-      .catch(() => setError('Invalid or expired invite link.'))
-      .finally(() => setLoading(false));
-  }, [code, isAuthenticated]);
-
-  async function handleJoin() {
     setJoining(true);
     try {
       const res = await api.post(`/api/invites/${code}/join`);

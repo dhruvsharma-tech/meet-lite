@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 import authService from '../services/authService';
@@ -7,6 +7,9 @@ import { useAuthStore } from '../store/authStore';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/app';
+
   const setUser = useAuthStore((state) => state.setUser);
 
   const [email, setEmail] = useState('');
@@ -30,7 +33,7 @@ export default function LoginPage() {
       const data = await authService.login({ email, password });
       setUser(data.user);
       toast.success(`Welcome back, ${data.user.name}!`);
-      navigate('/app');
+      navigate(redirect);
     } catch (err) {
       const msg = err.response?.data?.error || 'Invalid email or password.';
       setError(msg);
@@ -126,7 +129,10 @@ export default function LoginPage() {
 
         <div className="mt-5 text-left text-xs text-[#b5bac1]">
           Need an account?{' '}
-          <Link to="/register" className="text-[#00a8fc] hover:underline font-medium">
+          <Link
+            to={redirect !== '/app' ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register'}
+            className="text-[#00a8fc] hover:underline font-medium"
+          >
             Register
           </Link>
         </div>

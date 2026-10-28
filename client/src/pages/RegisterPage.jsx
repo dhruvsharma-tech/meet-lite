@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 import authService from '../services/authService';
@@ -7,6 +7,9 @@ import { useAuthStore } from '../store/authStore';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/app';
+
   const setUser = useAuthStore((state) => state.setUser);
 
   const [name, setName] = useState('');
@@ -35,7 +38,7 @@ export default function RegisterPage() {
       const data = await authService.register({ name: name.trim(), email, password });
       setUser(data.user);
       toast.success(`Account created! Welcome, ${data.user.name}.`);
-      navigate('/app');
+      navigate(redirect);
     } catch (err) {
       const msg = err.response?.data?.error || 'Registration failed. Please try again.';
       setError(msg);
@@ -147,7 +150,10 @@ export default function RegisterPage() {
 
         <div className="mt-5 text-left text-xs text-[#b5bac1]">
           Already have an account?{' '}
-          <Link to="/login" className="text-[#00a8fc] hover:underline font-medium">
+          <Link
+            to={redirect !== '/app' ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'}
+            className="text-[#00a8fc] hover:underline font-medium"
+          >
             Log In
           </Link>
         </div>
