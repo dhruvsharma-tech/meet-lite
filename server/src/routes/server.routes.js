@@ -38,3 +38,4 @@ router.delete('/:serverId/leave', isMember, leaveServer);
 router.use('/:serverId/channels', channelRouter);
 
 export default router;
+

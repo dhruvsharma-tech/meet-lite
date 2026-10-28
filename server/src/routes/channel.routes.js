@@ -34,3 +34,4 @@ router.patch('/:channelId', isOwner, updateChannel);
 router.delete('/:channelId', isOwner, deleteChannel);
 
 export default router;
+

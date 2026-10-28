@@ -1,84 +1,156 @@
-import { useNavigate, useParams } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import { LogOut, Hash, Volume2 } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
-import authService from '../services/authService';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Hash, Volume2, MessageSquare, Plus, Compass } from 'lucide-react';
+import { useServerStore } from '../store/serverStore';
+import { useUIStore } from '../store/uiStore';
+import serverService from '../services/serverService';
+import ServerList from '../components/server/ServerList';
+import ChannelSidebar from '../components/channel/ChannelSidebar';
+import CreateServerModal from '../components/server/CreateServerModal';
+import CreateChannelModal from '../components/channel/CreateChannelModal';
 
 export default function AppPage() {
-  const navigate = useNavigate();
   const { serverId, channelId } = useParams();
-  const { user, clearUser } = useAuthStore();
+  const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-      clearUser();
-      toast.success('Logged out successfully.');
-      navigate('/login');
-    } catch (err) {
-      toast.error('Failed to logout.');
+  const servers = useServerStore((state) => state.servers);
+  const setServers = useServerStore((state) => state.setServers);
+  const currentServer = useServerStore((state) => state.currentServer);
+  const setCurrentServer = useServerStore((state) => state.setCurrentServer);
+  const channels = useServerStore((state) => state.channels);
+
+  const setCreateServerOpen = useUIStore((state) => state.setCreateServerOpen);
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 1. Load user servers on mount
+  useEffect(() => {
+    async function loadServers() {
+      try {
+        const data = await serverService.getServers();
+        setServers(data.servers || []);
+      } catch (err) {
+        console.error('Failed to load servers:', err);
+      }
     }
-  };
+    loadServers();
+  }, [setServers]);
+
+  // 2. Load active server details when serverId changes
+  useEffect(() => {
+    if (!serverId) {
+      setCurrentServer(null);
+      return;
+    }
+
+    async function loadServerDetails() {
+      setIsLoading(true);
+      try {
+        const data = await serverService.getServer(serverId);
+        setCurrentServer(data.server);
+
+        // If no channelId in URL and server has channels, default to first channel
+        if (!channelId && data.server.channels?.length > 0) {
+          navigate(`/app/${serverId}/${data.server.channels[0].id}`, { replace: true });
+        }
+      } catch (err) {
+        console.error('Failed to load server details:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadServerDetails();
+  }, [serverId, setCurrentServer, navigate]);
+
+  // Find active channel
+  const activeChannel = channels.find((c) => c.id === channelId);
 
   return (
-    <div className="flex h-screen w-full bg-[#313338] text-[#f2f3f5] font-sans">
-      {/* Mini Sidebar placeholder until Step 6 */}
-      <div className="w-18 bg-[#1e1f22] flex flex-col items-center py-3 gap-3 border-r border-[#1e1f22]">
-        <div className="w-12 h-12 rounded-2xl bg-[#5865f2] flex items-center justify-center text-white font-bold text-lg shadow-md">
-          {user?.name?.[0]?.toUpperCase() || 'D'}
-        </div>
-      </div>
+    <div className="flex h-screen w-full bg-[#313338] text-[#f2f3f5] overflow-hidden select-none font-sans">
+      {/* Panel 1: Server List (72px) */}
+      <ServerList />
 
-      {/* Main Container */}
-      <div className="flex-1 flex flex-col">
-        {/* Top Header */}
-        <header className="h-12 border-b border-[#1f2023] bg-[#313338] px-4 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[#f2f3f5]">
-            <Hash className="w-5 h-5 text-[#80848e]" />
-            <span>welcome</span>
-            {serverId && <span className="text-xs text-[#80848e]">/ server: {serverId}</span>}
-            {channelId && <span className="text-xs text-[#80848e]">/ channel: {channelId}</span>}
-          </div>
+      {/* Panel 2: Channel Sidebar (240px, visible if server selected) */}
+      {serverId && <ChannelSidebar />}
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-[#5865f2] flex items-center justify-center font-bold text-xs text-white">
-                {user?.name?.slice(0, 2).toUpperCase() || 'U'}
-              </div>
-              <div className="text-left hidden sm:block">
-                <div className="text-xs font-semibold leading-tight">{user?.name}</div>
-                <div className="text-[10px] text-[#23a55a] font-medium leading-tight">● Online</div>
-              </div>
+      {/* Panel 3: Main Content Viewport */}
+      <main className="flex-1 flex flex-col bg-[#313338] overflow-hidden relative">
+        {/* State A: No Server Selected */}
+        {!serverId ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-20 h-20 rounded-full bg-[#5865f2]/20 text-[#5865f2] flex items-center justify-center mb-4">
+              <Compass className="w-10 h-10" />
             </div>
-
+            <h2 className="text-2xl font-bold text-white mb-2">Welcome to Discord Clone!</h2>
+            <p className="text-sm text-[#b5bac1] max-w-md mb-6">
+              Create a server to hang out with friends, or join one from an invite link.
+            </p>
             <button
-              onClick={handleLogout}
-              className="p-1.5 rounded hover:bg-[#35373c] text-[#b5bac1] hover:text-[#f23f42] transition-colors cursor-pointer"
-              title="Log Out"
+              onClick={() => setCreateServerOpen(true)}
+              className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] text-white text-sm font-medium rounded transition-colors flex items-center gap-2 cursor-pointer shadow-md"
             >
-              <LogOut className="w-4 h-4" />
+              <Plus className="w-4 h-4" />
+              Create a Server
             </button>
           </div>
-        </header>
-
-        {/* Content Area */}
-        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <div className="max-w-md bg-[#2b2d31] p-8 rounded-xl shadow-lg border border-[#1e1f22]/40">
-            <div className="w-16 h-16 rounded-full bg-[#5865f2]/20 text-[#5865f2] flex items-center justify-center mx-auto mb-4">
-              <Volume2 className="w-8 h-8" />
+        ) : !activeChannel ? (
+          /* State B: Server Selected but No Channel Selected */
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-[#2b2d31] text-[#80848e] flex items-center justify-center mb-4">
+              <MessageSquare className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Welcome to your Discord Space!</h2>
-            <p className="text-sm text-[#b5bac1] mb-6">
-              You are logged in as <span className="text-white font-semibold">{user?.email}</span>.
-              Authentication and persistent sessions are active!
+            <h3 className="text-lg font-bold text-white mb-1">No Channel Selected</h3>
+            <p className="text-xs text-[#b5bac1] max-w-sm">
+              Pick a text or voice channel from the sidebar on the left to start chatting!
             </p>
-            <div className="text-xs text-[#80848e] bg-[#1e1f22] p-3 rounded">
-              Ready for Step 5 & 6 (Servers, Channels & 3-Panel Discord Layout).
+          </div>
+        ) : (
+          /* State C: Channel Selected (Text or Voice) */
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            {/* Channel Top Header Bar */}
+            <header className="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between shrink-0 shadow-xs bg-[#313338]">
+              <div className="flex items-center gap-2 text-white font-semibold text-sm">
+                {activeChannel.type === 'VOICE' ? (
+                  <Volume2 className="w-5 h-5 text-[#80848e]" />
+                ) : (
+                  <Hash className="w-5 h-5 text-[#80848e]" />
+                )}
+                <span>{activeChannel.name}</span>
+                <span className="text-xs text-[#80848e] font-normal ml-2 hidden sm:inline">
+                  {activeChannel.type === 'VOICE'
+                    ? 'Voice & Video Channel'
+                    : 'Text Channel'}
+                </span>
+              </div>
+            </header>
+
+            {/* Main Channel View Content (Ready for Step 8 & Step 11) */}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#313338]">
+              <div className="w-16 h-16 rounded-2xl bg-[#2b2d31] flex items-center justify-center text-[#5865f2] mb-4 shadow-sm">
+                {activeChannel.type === 'VOICE' ? (
+                  <Volume2 className="w-8 h-8" />
+                ) : (
+                  <Hash className="w-8 h-8" />
+                )}
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-1">
+                Welcome to #{activeChannel.name}!
+              </h2>
+              <p className="text-sm text-[#b5bac1] max-w-md">
+                This is the start of the #{activeChannel.name} channel.
+                {activeChannel.type === 'VOICE'
+                  ? ' Multi-user LiveKit SFU voice & video will be wired in Step 11.'
+                  : ' Real-time persistent Socket.IO chat will be wired in Step 8.'}
+              </p>
             </div>
           </div>
-        </main>
-      </div>
+        )}
+      </main>
+
+      {/* Global Modals */}
+      <CreateServerModal />
+      <CreateChannelModal />
     </div>
   );
 }
-
