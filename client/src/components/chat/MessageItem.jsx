@@ -70,3 +70,4 @@ export default function MessageItem({ message, isCompact }) {
     </div>
   );
 }
+

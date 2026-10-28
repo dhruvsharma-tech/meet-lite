@@ -60,3 +60,4 @@ export default function MessageInput({ channelName, onSendMessage, onTyping }) {
     </div>
   );
 }
+

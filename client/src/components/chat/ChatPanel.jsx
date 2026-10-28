@@ -47,3 +47,4 @@ export default function ChatPanel({ channelId, channelName }) {
     </div>
   );
 }
+
