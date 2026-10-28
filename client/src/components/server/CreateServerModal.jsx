@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,13 +11,20 @@ export default function CreateServerModal() {
   const navigate = useNavigate();
   const isOpen = useUIStore((state) => state.isCreateServerOpen);
   const setOpen = useUIStore((state) => state.setCreateServerOpen);
+  const createServerMode = useUIStore((state) => state.createServerMode);
   const addServer = useServerStore((state) => state.addServer);
 
-  const [mode, setMode] = useState('CREATE'); // 'CREATE' | 'JOIN'
+  const [mode, setMode] = useState(createServerMode || 'CREATE'); // 'CREATE' | 'JOIN'
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
   const [inviteInput, setInviteInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMode(createServerMode || 'CREATE');
+    }
+  }, [isOpen, createServerMode]);
 
   if (!isOpen) return null;
 
@@ -97,7 +104,7 @@ export default function CreateServerModal() {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm select-none">
       <div className="w-full max-w-md bg-[#313338] text-[#f2f3f5] rounded-xl shadow-2xl overflow-hidden animate-fade-in border border-[#1e1f22]">
         {/* Header */}
-        <div className="p-6 text-center relative">
+        <div className="p-6 pb-3 text-center relative">
           <button
             onClick={() => {
               setOpen(false);
@@ -107,14 +114,40 @@ export default function CreateServerModal() {
           >
             <X className="w-5 h-5" />
           </button>
-          <h2 className="text-2xl font-bold text-white mb-2">
+          <h2 className="text-2xl font-bold text-white mb-1">
             {mode === 'CREATE' ? 'Customize your server' : 'Join a Server'}
           </h2>
-          <p className="text-sm text-[#b5bac1]">
+          <p className="text-xs text-[#b5bac1]">
             {mode === 'CREATE'
-              ? 'Give your new server a personality with a name and an icon. You can always change it later.'
-              : 'Enter an invite link or invite code to join an existing server.'}
+              ? 'Give your new server a personality with a name and icon.'
+              : 'Enter an invite link or 8-character code from a friend.'}
           </p>
+        </div>
+
+        {/* Mode Switcher Tabs */}
+        <div className="flex bg-[#1e1f22] p-1 mx-6 rounded-lg mb-4 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => setMode('CREATE')}
+            className={`flex-1 py-1.5 rounded-md transition-all cursor-pointer ${
+              mode === 'CREATE'
+                ? 'bg-[#5865f2] text-white shadow-sm'
+                : 'text-[#949ba4] hover:text-white'
+            }`}
+          >
+            Create Server
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('JOIN')}
+            className={`flex-1 py-1.5 rounded-md transition-all cursor-pointer ${
+              mode === 'JOIN'
+                ? 'bg-[#23a55a] text-white shadow-sm'
+                : 'text-[#949ba4] hover:text-white'
+            }`}
+          >
+            Join with Invite
+          </button>
         </div>
 
         {/* Mode: CREATE */}
