@@ -61,3 +61,4 @@ export default function ServerIcon({ id, name, icon, isActive, onClick }) {
     </div>
   );
 }
+

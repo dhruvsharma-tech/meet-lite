@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import app from './src/app.js';
-import { registerSocketHandlers } from './src/socket.js';
+import { initSocketIO } from './src/socket/index.js';
 import { startRoomCleanup } from './src/rooms.js';
 
 const PORT = process.env.PORT || 5000;
@@ -25,7 +25,8 @@ const io = new Server(httpServer, {
   },
 });
 
-registerSocketHandlers(io);
+// Initialize modern Socket.IO auth & handlers
+initSocketIO(io);
 
 // Start periodic cleanup of empty rooms (legacy P2P — deprecated in Step 12)
 startRoomCleanup();

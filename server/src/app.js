@@ -6,6 +6,7 @@ import { initPassport } from './config/passport.js';
 import authRouter from './routes/auth.routes.js';
 import serverRouter from './routes/server.routes.js';
 import channelRouter from './routes/channel.routes.js';
+import messageRouter from './routes/message.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -58,6 +59,9 @@ app.use('/api/auth', authRouter);
 // Step 5: Servers & Channels
 app.use('/api/servers', serverRouter);
 app.use('/api/servers/:serverId/channels', channelRouter);
+
+// Step 7: Persistent Messages
+app.use('/api/channels', messageRouter);
 
 // Step 9: Invites & Members
 // import inviteRouter from './routes/invite.routes.js';
