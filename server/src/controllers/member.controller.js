@@ -45,3 +45,4 @@ export async function kickMember(req, res, next) {
     next(err);
   }
 }
+

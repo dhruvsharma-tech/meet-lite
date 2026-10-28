@@ -10,3 +10,4 @@ router.get('/invites/:code', getInvitePreview);
 router.post('/invites/:code/join', authMiddleware, joinByInvite);
 
 export default router;
+

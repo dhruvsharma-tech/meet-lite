@@ -10,3 +10,5 @@ export function isOwner(req, res, next) {
   next();
 }
 
+export default isOwner;
+

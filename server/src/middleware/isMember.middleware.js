@@ -31,3 +31,5 @@ export async function isMember(req, res, next) {
   }
 }
 
+export default isMember;
+

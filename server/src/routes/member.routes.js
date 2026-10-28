@@ -10,3 +10,4 @@ router.get('/:serverId/members', authMiddleware, isMember, getMembers);
 router.delete('/:serverId/members/:memberId', authMiddleware, isMember, isOwner, kickMember);
 
 export default router;
+

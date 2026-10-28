@@ -9,6 +9,7 @@ import channelRouter from './routes/channel.routes.js';
 import messageRouter from './routes/message.routes.js';
 import inviteRouter from './routes/invite.routes.js';
 import memberRouter from './routes/member.routes.js';
+import livekitRouter from './routes/livekit.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
@@ -70,8 +71,7 @@ app.use('/api', inviteRouter);
 app.use('/api/servers', memberRouter);
 
 // Step 10: LiveKit
-// import livekitRouter from './routes/livekit.routes.js';
-// app.use('/api/livekit', livekitRouter);
+app.use('/api/livekit', livekitRouter);
 
 // ─── Global Error Handler (must be last) ──────────────────────────────────────
 
