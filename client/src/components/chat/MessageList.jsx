@@ -7,14 +7,12 @@ import MessageItem from './MessageItem';
 const EMPTY_MESSAGES = [];
 
 export default function MessageList({ channelId, channelName }) {
-  // Stable selectors to avoid React 19 getSnapshot infinite loop
+  // Stable data selectors — split from action selectors to avoid React 19 getSnapshot loop
   const rawMessages = useChatStore((state) => state.messages[channelId]);
   const messages = rawMessages || EMPTY_MESSAGES;
 
   const hasMore = useChatStore((state) => Boolean(state.hasMore[channelId]));
   const nextCursor = useChatStore((state) => state.nextCursors[channelId] ?? null);
-  const setMessages = useChatStore((state) => state.setMessages);
-  const prependMessages = useChatStore((state) => state.prependMessages);
 
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -35,7 +33,8 @@ export default function MessageList({ channelId, channelName }) {
 
         // Backend returns newest first; reverse so oldest is at the top of the chat view
         const chronological = (data.messages || []).reverse();
-        setMessages(channelId, chronological, Boolean(data.nextCursor), data.nextCursor);
+        // Use getState() to call action — avoids stale closure & no dep needed
+        useChatStore.getState().setMessages(channelId, chronological, Boolean(data.nextCursor), data.nextCursor);
       } catch (err) {
         console.error('Failed to load message history:', err);
       } finally {
@@ -48,7 +47,7 @@ export default function MessageList({ channelId, channelName }) {
     return () => {
       isMounted = false;
     };
-  }, [channelId, setMessages]);
+  }, [channelId]);
 
   // 2. Auto-scroll to bottom on new message
   useEffect(() => {
@@ -69,7 +68,7 @@ export default function MessageList({ channelId, channelName }) {
       try {
         const data = await messageService.getMessages(channelId, nextCursor);
         const olderChronological = (data.messages || []).reverse();
-        prependMessages(
+        useChatStore.getState().prependMessages(
           channelId,
           olderChronological,
           Boolean(data.nextCursor),
@@ -89,7 +88,7 @@ export default function MessageList({ channelId, channelName }) {
         setIsLoadingMore(false);
       }
     }
-  }, [channelId, hasMore, nextCursor, isLoadingMore, prependMessages]);
+  }, [channelId, hasMore, nextCursor, isLoadingMore]);
 
   if (isLoadingHistory && messages.length === 0) {
     return (
