@@ -4,7 +4,6 @@ import prisma from '../prisma.js';
 import { registerChatHandlers } from './chatHandlers.js';
 import { registerTypingHandlers } from './typingHandlers.js';
 import { registerPresenceHandlers } from './presenceHandlers.js';
-import { registerVoiceChatHandlers } from './voiceChatHandlers.js';
 
 // In-memory mapping of online users: Map<userId, socketId>
 export const onlineUsers = new Map();
@@ -71,11 +70,10 @@ export function initSocketIO(io) {
       }
     });
 
-    // Register Chat, Typing, Presence & Voice Chat Handlers
+    // Register Chat, Typing, and Presence Handlers (In-call voice chat is handled by LiveKit DataChannels)
     registerChatHandlers(io, socket);
     registerTypingHandlers(io, socket);
     registerPresenceHandlers(io, socket);
-    registerVoiceChatHandlers(io, socket);
 
     // Disconnect cleanup
     socket.on('disconnect', () => {

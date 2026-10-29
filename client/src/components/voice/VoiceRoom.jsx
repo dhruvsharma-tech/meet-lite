@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Volume2, Users, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import {
@@ -7,20 +7,25 @@ import {
   useTracks,
   useParticipants,
   useConnectionState,
+  useRoomContext,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track, ConnectionState, VideoPresets } from 'livekit-client';
+import { Track, ConnectionState, VideoPresets, RoomEvent } from 'livekit-client';
 import toast from 'react-hot-toast';
 
 import useLiveKit from '../../hooks/useLiveKit';
 import { useVoiceStore } from '../../store/voiceStore';
+import { useAuthStore } from '../../store/authStore';
 import ParticipantGrid from './ParticipantGrid';
 import ScreenShareView from './ScreenShareView';
 import VoiceControls from './VoiceControls';
 import VoiceChatPanel from './VoiceChatPanel';
 
-function VoiceRoomInner({ channelName, onDisconnect, sendVoiceMessage }) {
+function VoiceRoomInner({ channelName, onDisconnect }) {
+  const room = useRoomContext();
+  const user = useAuthStore((state) => state.user);
   const isChatOpen = useVoiceStore((state) => state.isChatOpen);
+  const addVoiceMessage = useVoiceStore((state) => state.addVoiceMessage);
   const participants = useParticipants();
   const connectionState = useConnectionState();
 
@@ -31,6 +36,65 @@ function VoiceRoomInner({ channelName, onDisconnect, sendVoiceMessage }) {
   const activeScreenShare = screenShareTracks.length > 0 ? screenShareTracks[0] : null;
 
   const isReconnecting = connectionState === ConnectionState.Reconnecting;
+
+  // Listen for in-call chat messages over Native LiveKit WebRTC Data Channel (0ms latency, zero server DB load)
+  useEffect(() => {
+    if (!room) return;
+
+    const handleDataReceived = (payload, participant, kind, topic) => {
+      try {
+        const decoded = new TextDecoder().decode(payload);
+        const data = JSON.parse(decoded);
+        if (data && (data.type === 'chat' || topic === 'chat')) {
+          addVoiceMessage({
+            id: data.id || `${Date.now()}-${Math.random()}`,
+            userId: data.userId || participant?.identity,
+            name: data.name || participant?.name || 'User',
+            content: data.content,
+            createdAt: data.createdAt || new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.warn('[LiveKit DataChannel] Could not decode incoming packet:', err);
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleDataReceived);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleDataReceived);
+    };
+  }, [room, addVoiceMessage]);
+
+  // Send ephemeral chat message via LiveKit reliable WebRTC data channel
+  const handleSendVoiceMessage = useCallback(
+    async (content) => {
+      if (!room || !content?.trim()) return;
+      const trimmed = content.trim();
+
+      const message = {
+        type: 'chat',
+        id: `${Date.now()}-${room.localParticipant.identity}`,
+        userId: room.localParticipant.identity,
+        name: room.localParticipant.name || user?.name || 'You',
+        content: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+
+      try {
+        const payload = new TextEncoder().encode(JSON.stringify(message));
+        await room.localParticipant.publishData(payload, {
+          reliable: true,
+          topic: 'chat',
+        });
+        // Optimistic display for sender
+        addVoiceMessage(message);
+      } catch (err) {
+        console.error('[LiveKit DataChannel] Message send failed:', err);
+        toast.error('Failed to send in-call message');
+      }
+    },
+    [room, user, addVoiceMessage]
+  );
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#111214] overflow-hidden relative">
@@ -67,8 +131,8 @@ function VoiceRoomInner({ channelName, onDisconnect, sendVoiceMessage }) {
           )}
         </div>
 
-        {/* Collapsible Right Side Chat Panel */}
-        {isChatOpen && <VoiceChatPanel onSendMessage={sendVoiceMessage} />}
+        {/* Collapsible Right Side Chat Panel via WebRTC Data Channels */}
+        {isChatOpen && <VoiceChatPanel onSendMessage={handleSendVoiceMessage} />}
       </div>
 
       {/* Bottom Floating/Docked Voice Controls */}
@@ -82,7 +146,7 @@ function VoiceRoomInner({ channelName, onDisconnect, sendVoiceMessage }) {
 
 export default function VoiceRoom({ channelId, channelName, serverId }) {
   const navigate = useNavigate();
-  const { token, serverUrl, isLoading, error, disconnect, sendVoiceMessage } = useLiveKit(channelId);
+  const { token, serverUrl, isLoading, error, disconnect } = useLiveKit(channelId);
 
   // Scalable LiveKit Room Options for 10-20 users
   const roomOptions = useMemo(
@@ -177,7 +241,6 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
       <VoiceRoomInner
         channelName={channelName}
         onDisconnect={handleDisconnect}
-        sendVoiceMessage={sendVoiceMessage}
       />
     </LiveKitRoom>
   );

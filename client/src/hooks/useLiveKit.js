@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { VideoPresets } from 'livekit-client';
 import api from '../services/api';
-import socket from '../socket';
 import { useVoiceStore } from '../store/voiceStore';
 
 export function useLiveKit(channelId) {
@@ -13,7 +12,6 @@ export function useLiveKit(channelId) {
   const roomRef = useRef(null);
 
   const setConnected = useVoiceStore((state) => state.setConnected);
-  const addVoiceMessage = useVoiceStore((state) => state.addVoiceMessage);
   const clearVoiceMessages = useVoiceStore((state) => state.clearVoiceMessages);
   const setMuted = useVoiceStore((state) => state.setMuted);
   const setCameraOn = useVoiceStore((state) => state.setCameraOn);
@@ -53,32 +51,15 @@ export function useLiveKit(channelId) {
 
     fetchToken();
 
-    // Join ephemeral socket voice room
-    socket.emit('voice:join', { channelId }, (response) => {
-      if (response?.messages && Array.isArray(response.messages)) {
-        response.messages.forEach((msg) => addVoiceMessage(msg));
-      }
-    });
-
-    const handleVoiceMessageNew = ({ channelId: incomingChannelId, message }) => {
-      if (incomingChannelId === channelId) {
-        addVoiceMessage(message);
-      }
-    };
-
-    socket.on('voice:message:new', handleVoiceMessageNew);
-
     return () => {
       isMounted = false;
-      socket.emit('voice:leave', { channelId });
-      socket.off('voice:message:new', handleVoiceMessageNew);
       clearVoiceMessages();
       setConnected(false);
       setMuted(false);
       setCameraOn(false);
       setScreenSharing(false);
     };
-  }, [channelId, setConnected, clearVoiceMessages, addVoiceMessage, setMuted, setCameraOn, setScreenSharing]);
+  }, [channelId, setConnected, clearVoiceMessages, setMuted, setCameraOn, setScreenSharing]);
 
   // 2. Attach LiveKit room instance for controls
   const attachRoom = useCallback((room) => {
@@ -91,7 +72,7 @@ export function useLiveKit(channelId) {
     if (!room?.localParticipant) return;
     const currentState = room.localParticipant.isMicrophoneEnabled;
     await room.localParticipant.setMicrophoneEnabled(!currentState);
-    setMuted(currentState); // if it was enabled, it is now muted
+    setMuted(currentState);
   }, [setMuted]);
 
   const toggleCamera = useCallback(async () => {
@@ -127,15 +108,6 @@ export function useLiveKit(channelId) {
     setConnected(false);
   }, [setConnected]);
 
-  // 4. Send ephemeral message
-  const sendVoiceMessage = useCallback((content) => {
-    if (!channelId || !content?.trim()) return;
-    socket.emit('voice:message:send', {
-      channelId,
-      content: content.trim(),
-    });
-  }, [channelId]);
-
   return {
     token,
     serverUrl,
@@ -146,7 +118,6 @@ export function useLiveKit(channelId) {
     toggleCamera,
     toggleScreenShare,
     disconnect,
-    sendVoiceMessage,
   };
 }
 
