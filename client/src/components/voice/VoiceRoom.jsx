@@ -1,8 +1,16 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Volume2, Users, Loader2, AlertCircle } from 'lucide-react';
-import { LiveKitRoom, RoomAudioRenderer, useTracks, useParticipants } from '@livekit/components-react';
+import { Volume2, Users, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  LiveKitRoom,
+  RoomAudioRenderer,
+  useTracks,
+  useParticipants,
+  useConnectionState,
+} from '@livekit/components-react';
 import '@livekit/components-styles';
-import { Track } from 'livekit-client';
+import { Track, ConnectionState, VideoPresets } from 'livekit-client';
+import toast from 'react-hot-toast';
 
 import useLiveKit from '../../hooks/useLiveKit';
 import { useVoiceStore } from '../../store/voiceStore';
@@ -14,12 +22,15 @@ import VoiceChatPanel from './VoiceChatPanel';
 function VoiceRoomInner({ channelName, onDisconnect, sendVoiceMessage }) {
   const isChatOpen = useVoiceStore((state) => state.isChatOpen);
   const participants = useParticipants();
+  const connectionState = useConnectionState();
 
   // Detect active screen share track
   const screenShareTracks = useTracks([
     { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
   const activeScreenShare = screenShareTracks.length > 0 ? screenShareTracks[0] : null;
+
+  const isReconnecting = connectionState === ConnectionState.Reconnecting;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#111214] overflow-hidden relative">
@@ -31,6 +42,13 @@ function VoiceRoomInner({ channelName, onDisconnect, sendVoiceMessage }) {
           <span className="text-xs text-[#80848e] font-normal ml-2 hidden sm:inline">
             Voice & Video Connected
           </span>
+          {/* Reconnecting Badge */}
+          {isReconnecting && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#fee75c]/20 text-[#fee75c] border border-[#fee75c]/30 animate-pulse ml-2">
+              <RefreshCw className="w-3 h-3 animate-spin" />
+              Reconnecting...
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 text-xs font-medium text-[#b5bac1] bg-[#1e1f22] px-2.5 py-1 rounded-md">
@@ -66,11 +84,53 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
   const navigate = useNavigate();
   const { token, serverUrl, isLoading, error, disconnect, sendVoiceMessage } = useLiveKit(channelId);
 
+  // Scalable LiveKit Room Options for 10-20 users
+  const roomOptions = useMemo(
+    () => ({
+      // 1. AdaptiveStream: only pull resolution needed for tile display size (saves downstream CPU & bandwidth)
+      adaptiveStream: true,
+      // 2. Dynacast: pause upstream video when no subscribers are watching (saves upstream CPU & bandwidth)
+      dynacast: true,
+      // 3. Audio Processing: Noise suppression, acoustic echo cancellation, and auto gain control
+      audioCaptureDefaults: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+      // 4. Video Presets: default 360p capture to avoid 1080p camera overload in group calls
+      videoCaptureDefaults: {
+        resolution: VideoPresets.h360.resolution, // 640x360
+      },
+      // 5. Simulcast: publish multi-resolution layers (180p, 360p, 720p)
+      publishDefaults: {
+        simulcast: true,
+        videoSimulcastLayers: [
+          VideoPresets.h180,
+          VideoPresets.h360,
+          VideoPresets.h720,
+        ],
+        stopMicTrackOnMute: false,
+      },
+      disconnectOnPageLeave: true,
+      stopLocalTrackOnUnpublish: true,
+    }),
+    []
+  );
+
   const handleDisconnect = () => {
     disconnect();
     if (serverId) {
       navigate(`/app/${serverId}`);
     }
+  };
+
+  const handleRoomError = (err) => {
+    console.error('[LiveKit Room Error]:', err);
+    toast.error('Voice room error: ' + (err.message || 'Connection lost'));
+  };
+
+  const handleRoomDisconnected = (reason) => {
+    console.log('[LiveKit Disconnected]:', reason);
   };
 
   if (isLoading) {
@@ -109,6 +169,9 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
       connect={true}
       video={false}
       audio={true}
+      options={roomOptions}
+      onError={handleRoomError}
+      onDisconnected={handleRoomDisconnected}
       className="flex-1 flex flex-col h-full overflow-hidden"
     >
       <VoiceRoomInner

@@ -146,3 +146,4 @@ Requirements:
 | **In-Call Chat Path** | Socket.IO -> Database -> Socket.IO | WebRTC Data Channel (0ms latency, 0 DB load) |
 | **Audio Processing** | Raw browser stream | Opus + Echo Cancellation + Noise Suppression |
 | **Deployment Readiness** | Local config messy | 100% Cloud-ready via `.env` variables |
+

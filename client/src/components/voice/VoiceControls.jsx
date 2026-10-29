@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, MessageSquare, PhoneOff, Loader2 } from 'lucide-react';
 import { useLocalParticipant } from '@livekit/components-react';
+import { VideoPresets } from 'livekit-client';
 import toast from 'react-hot-toast';
 import { useVoiceStore } from '../../store/voiceStore';
 
@@ -29,9 +30,13 @@ export default function VoiceControls({ onDisconnect }) {
     if (!localParticipant || isCameraLoading) return;
     setIsCameraLoading(true);
     try {
-      await localParticipant.setCameraEnabled(!isCameraEnabled);
+      await localParticipant.setCameraEnabled(
+        !isCameraEnabled,
+        { resolution: VideoPresets.h360.resolution },
+        { simulcast: true }
+      );
       if (!isCameraEnabled) {
-        toast.success('Camera turned on');
+        toast.success('Camera turned on (360p Simulcast)');
       } else {
         toast('Camera turned off', { icon: '📷' });
       }

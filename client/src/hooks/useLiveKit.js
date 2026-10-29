@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { VideoPresets } from 'livekit-client';
 import api from '../services/api';
 import socket from '../socket';
 import { useVoiceStore } from '../store/voiceStore';
@@ -97,7 +98,11 @@ export function useLiveKit(channelId) {
     const room = roomRef.current;
     if (!room?.localParticipant) return;
     const currentState = room.localParticipant.isCameraEnabled;
-    await room.localParticipant.setCameraEnabled(!currentState);
+    await room.localParticipant.setCameraEnabled(
+      !currentState,
+      { resolution: VideoPresets.h360.resolution },
+      { simulcast: true }
+    );
     setCameraOn(!currentState);
   }, [setCameraOn]);
 
