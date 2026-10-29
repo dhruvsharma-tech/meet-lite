@@ -30,10 +30,15 @@ export default {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-4px)' },
         },
+        'marquee': {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 150ms ease-out',
         'bounce-dot': 'bounce-dot 1s infinite ease-in-out',
+        'marquee': 'marquee 20s linear infinite',
       },
     },
   },

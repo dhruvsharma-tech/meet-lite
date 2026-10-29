@@ -9,6 +9,7 @@ import ServerList from '../components/server/ServerList';
 import ChannelSidebar from '../components/channel/ChannelSidebar';
 import CreateServerModal from '../components/server/CreateServerModal';
 import CreateChannelModal from '../components/channel/CreateChannelModal';
+import InviteModal from '../components/server/InviteModal';
 import ChatPanel from '../components/chat/ChatPanel';
 import MemberList from '../components/channel/MemberList';
 import VoiceRoom from '../components/voice/VoiceRoom';
@@ -184,6 +185,7 @@ export default function AppPage() {
       {/* Global Modals */}
       <CreateServerModal />
       <CreateChannelModal />
+      <InviteModal />
     </div>
   );
 }

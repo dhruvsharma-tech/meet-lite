@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AppPage from './pages/AppPage';
 import InvitePage from './pages/InvitePage';
+import LandingPage from './pages/LandingPage';
 
 export default function App() {
   const fetchMe = useAuthStore((state) => state.fetchMe);
@@ -75,11 +76,11 @@ export default function App() {
         {/* Invite Page (public but redirects to login if unauthenticated) */}
         <Route path="/invite/:code" element={<InvitePage />} />
 
-        {/* Root Redirects to /app (which redirects to /login if unauthenticated) */}
-        <Route path="/" element={<Navigate to="/app" replace />} />
+        {/* Root → Landing Page */}
+        <Route path="/" element={<LandingPage />} />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/app" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

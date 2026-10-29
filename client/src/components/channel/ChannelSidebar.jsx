@@ -5,6 +5,7 @@ import {
   Plus,
   LogOut,
   Trash2,
+  UserPlus,
   Link,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -28,6 +29,7 @@ export default function ChannelSidebar() {
   const removeChannel = useServerStore((state) => state.removeChannel);
 
   const setCreateChannelOpen = useUIStore((state) => state.setCreateChannelOpen);
+  const setInviteModalOpen = useUIStore((state) => state.setInviteModalOpen);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -85,16 +87,9 @@ export default function ChannelSidebar() {
     navigate('/login');
   };
 
-  const handleCopyInvite = async () => {
+  const handleOpenInviteModal = () => {
     setIsDropdownOpen(false);
-    try {
-      const res = await api.post(`/api/servers/${serverId}/invites`);
-      const link = `${window.location.origin}/invite/${res.data.code}`;
-      await navigator.clipboard.writeText(link);
-      toast.success('Invite link copied!');
-    } catch {
-      toast.error('Failed to generate invite link');
-    }
+    setInviteModalOpen(true);
   };
 
   if (!currentServer) return null;
@@ -135,11 +130,11 @@ export default function ChannelSidebar() {
               </button>
 
               <button
-                onClick={handleCopyInvite}
+                onClick={handleOpenInviteModal}
                 className="w-full text-left px-2.5 py-2 rounded text-[#949ba4] hover:bg-[#5865f2] hover:text-white flex items-center justify-between cursor-pointer"
               >
-                <span>Copy Invite Link</span>
-                <Link className="w-4 h-4" />
+                <span>Invite People</span>
+                <UserPlus className="w-4 h-4 text-[#5865f2] group-hover:text-white" />
               </button>
 
               <div className="h-[1px] bg-[#2b2d31] my-1" />
