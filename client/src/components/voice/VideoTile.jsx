@@ -6,9 +6,9 @@ export default function VideoTile({ trackRef, participant }) {
   const isSpeaking = useIsSpeaking(p);
 
   const hasVideo =
-    trackRef?.publication?.track &&
-    !trackRef.publication.isMuted &&
-    p?.isCameraEnabled;
+    Boolean(trackRef?.publication?.track) &&
+    !trackRef?.publication?.isMuted &&
+    Boolean(p?.isCameraEnabled);
 
   const isMuted = !p?.isMicrophoneEnabled;
   const displayName = p?.name || p?.identity || 'Participant';

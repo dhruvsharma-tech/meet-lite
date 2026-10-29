@@ -26,10 +26,10 @@ export default function ParticipantGrid() {
       <div className={`grid ${gridClass} gap-3 w-full h-full max-h-[85vh] justify-center auto-rows-fr`}>
         {items.map((item, idx) => {
           const participant = item.participant;
-          const key = item.publication?.trackSid || participant?.identity || idx;
+          const key = participant?.identity || item.publication?.trackSid || idx;
           return (
             <div key={key} className="w-full h-full min-h-[180px] flex">
-              <VideoTile trackRef={item.publication ? item : null} participant={participant} />
+              <VideoTile trackRef={item} participant={participant} />
             </div>
           );
         })}

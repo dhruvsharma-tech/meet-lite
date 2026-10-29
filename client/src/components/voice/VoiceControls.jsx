@@ -1,21 +1,60 @@
-import { Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, MessageSquare, PhoneOff } from 'lucide-react';
+import { useState } from 'react';
+import { Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, MessageSquare, PhoneOff, Loader2 } from 'lucide-react';
 import { useLocalParticipant } from '@livekit/components-react';
+import toast from 'react-hot-toast';
 import { useVoiceStore } from '../../store/voiceStore';
 
 export default function VoiceControls({ onDisconnect }) {
   const { isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, localParticipant } = useLocalParticipant();
+  const [isCameraLoading, setIsCameraLoading] = useState(false);
+  const [isMicLoading, setIsMicLoading] = useState(false);
 
   const isChatOpen = useVoiceStore((state) => state.isChatOpen);
   const toggleChat = useVoiceStore((state) => state.toggleChat);
 
   const handleToggleMic = async () => {
-    if (!localParticipant) return;
-    await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+    if (!localParticipant || isMicLoading) return;
+    setIsMicLoading(true);
+    try {
+      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+    } catch (err) {
+      console.error('Mic toggle error:', err);
+      toast.error('Microphone error: ' + (err.message || 'Device in use'));
+    } finally {
+      setIsMicLoading(false);
+    }
   };
 
   const handleToggleCamera = async () => {
-    if (!localParticipant) return;
-    await localParticipant.setCameraEnabled(!isCameraEnabled);
+    if (!localParticipant || isCameraLoading) return;
+    setIsCameraLoading(true);
+    try {
+      await localParticipant.setCameraEnabled(!isCameraEnabled);
+      if (!isCameraEnabled) {
+        toast.success('Camera turned on');
+      } else {
+        toast('Camera turned off', { icon: '📷' });
+      }
+    } catch (err) {
+      console.error('Camera toggle error:', err);
+      const msg = err?.message || err?.name || '';
+      if (
+        msg.includes('NotReadableError') ||
+        msg.includes('Could not start video source') ||
+        msg.includes('Device in use') ||
+        msg.includes('TrackStartError')
+      ) {
+        toast.error('Camera busy! Your webcam is already in use by another tab or browser on this computer. Turn off camera in Tab 1 or Tab 2 first.', {
+          duration: 5000,
+        });
+      } else if (msg.includes('NotAllowedError') || msg.includes('Permission denied')) {
+        toast.error('Camera permission blocked. Please allow camera in your browser address bar.');
+      } else {
+        toast.error('Camera error: ' + (err.message || 'Could not start camera'));
+      }
+    } finally {
+      setIsCameraLoading(false);
+    }
   };
 
   const handleToggleScreenShare = async () => {
@@ -24,6 +63,9 @@ export default function VoiceControls({ onDisconnect }) {
       await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
     } catch (err) {
       console.warn('Screen sharing cancelled or failed:', err);
+      if (err.name !== 'NotAllowedError') {
+        toast.error('Screen share error: ' + (err.message || 'Failed'));
+      }
     }
   };
 
@@ -33,6 +75,7 @@ export default function VoiceControls({ onDisconnect }) {
         {/* 1. Mic Button */}
         <button
           onClick={handleToggleMic}
+          disabled={isMicLoading}
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isMicrophoneEnabled
               ? 'bg-[#35373c] hover:bg-[#3f4147] text-white'
@@ -40,20 +83,33 @@ export default function VoiceControls({ onDisconnect }) {
           }`}
           title={isMicrophoneEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
         >
-          {isMicrophoneEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+          {isMicLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin text-white" />
+          ) : isMicrophoneEnabled ? (
+            <Mic className="w-5 h-5" />
+          ) : (
+            <MicOff className="w-5 h-5" />
+          )}
         </button>
 
         {/* 2. Camera Button */}
         <button
           onClick={handleToggleCamera}
+          disabled={isCameraLoading}
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isCameraEnabled
-              ? 'bg-[#35373c] hover:bg-[#3f4147] text-white'
-              : 'bg-[#2b2d31] hover:bg-[#35373c] text-[#80848e]'
+              ? 'bg-[#23a55a] hover:bg-[#1f9250] text-white'
+              : 'bg-[#35373c] hover:bg-[#3f4147] text-[#80848e]'
           }`}
           title={isCameraEnabled ? 'Turn Off Camera' : 'Turn On Camera'}
         >
-          {isCameraEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+          {isCameraLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin text-white" />
+          ) : isCameraEnabled ? (
+            <Video className="w-5 h-5" />
+          ) : (
+            <VideoOff className="w-5 h-5" />
+          )}
         </button>
 
         {/* 3. Screen Share Button */}
