@@ -150,3 +150,4 @@ class PermissionCacheService {
 // Export singleton instance
 export const permissionCache = new PermissionCacheService();
 export default permissionCache;
+
