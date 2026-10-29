@@ -1,5 +1,6 @@
 import { validationResult } from 'express-validator';
 import prisma from '../prisma.js';
+import permissionCache from '../services/permissionCache.service.js';
 
 // ─── POST /api/servers/:serverId/channels ─────────────────────────────────────
 // Create channel in server (requires isMember + isOwner middleware)
@@ -81,6 +82,9 @@ export async function deleteChannel(req, res, next) {
     await prisma.channel.delete({
       where: { id: channelId },
     });
+
+    // Invalidate cached permissions for this channel
+    permissionCache.invalidateChannel(channelId);
 
     return res.json({ message: 'Channel deleted' });
   } catch (err) {

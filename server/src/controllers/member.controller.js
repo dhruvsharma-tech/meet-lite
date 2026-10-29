@@ -1,4 +1,5 @@
 import prisma from '../prisma.js';
+import permissionCache from '../services/permissionCache.service.js';
 
 export async function getMembers(req, res, next) {
   try {
@@ -39,6 +40,9 @@ export async function kickMember(req, res, next) {
     }
 
     await prisma.member.delete({ where: { id: memberId } });
+
+    // Invalidate target user's cached permissions for this server immediately
+    permissionCache.invalidateServerUser(serverId, target.userId);
 
     res.json({ message: 'Member kicked successfully' });
   } catch (err) {

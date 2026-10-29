@@ -1,18 +1,10 @@
 import prisma from '../prisma.js';
+import permissionCache from '../services/permissionCache.service.js';
 
 // Strip HTML tags to sanitize messages
 function sanitizeContent(text) {
   if (typeof text !== 'string') return '';
   return text.replace(/<[^>]*>?/gm, '').trim();
-}
-
-// In-memory cache: `${userId}:${channelId}` → true/false
-// Avoids 2 DB queries per message for the same user+channel combo
-// Cache is intentionally short-lived (cleared on socket disconnect by channelId)
-const membershipCache = new Map();
-
-function getCacheKey(userId, channelId) {
-  return `${userId}:${channelId}`;
 }
 
 export function registerChatHandlers(io, socket) {
@@ -28,7 +20,7 @@ export function registerChatHandlers(io, socket) {
     if (channelId && typeof channelId === 'string') {
       socket.leave(channelId);
       // Invalidate cache for this user+channel on leave
-      membershipCache.delete(getCacheKey(socket.userId, channelId));
+      permissionCache.invalidateUserChannel(socket.userId, channelId);
     }
   });
 
@@ -47,10 +39,11 @@ export function registerChatHandlers(io, socket) {
         return;
       }
 
-      const cacheKey = getCacheKey(socket.userId, channelId);
+      // Check In-Memory Cache first (0ms latency fast-path)
+      const hasCachedAccess = permissionCache.hasAccess(socket.userId, channelId);
 
-      // Only hit DB if not cached — saves 2 round trips per message for established sessions
-      if (!membershipCache.has(cacheKey)) {
+      if (hasCachedAccess !== true) {
+        // Cache miss or expired — verify with Database (done once per session/TTL)
         // 1. Verify channel exists and is TEXT
         const channel = await prisma.channel.findUnique({
           where: { id: channelId },
@@ -82,11 +75,11 @@ export function registerChatHandlers(io, socket) {
           return;
         }
 
-        // Cache validated — subsequent messages skip DB checks
-        membershipCache.set(cacheKey, true);
+        // Cache validated access in RAM with 10-minute TTL
+        permissionCache.setAccess(socket.userId, channelId, channel.serverId, true);
       }
 
-      // 3. Save message to PostgreSQL (only 1 query now instead of 3)
+      // 3. Save message to PostgreSQL (only 1 DB query when cached)
       const message = await prisma.message.create({
         data: {
           content: sanitized,
@@ -115,14 +108,9 @@ export function registerChatHandlers(io, socket) {
     }
   });
 
-  // Clear cache on disconnect
+  // Clear user cache on socket disconnect
   socket.on('disconnect', () => {
-    // Remove all cache entries for this user
-    for (const key of membershipCache.keys()) {
-      if (key.startsWith(`${socket.userId}:`)) {
-        membershipCache.delete(key);
-      }
-    }
+    permissionCache.invalidateUser(socket.userId);
   });
 }
 
