@@ -22,13 +22,53 @@ export const useChatStore = create((set) => ({
       },
     })),
 
+  // Optimistic add — adds a pending message instantly to UI
+  addOptimisticMessage: (channelId, message) =>
+    set((state) => {
+      const channelMessages = state.messages[channelId] || [];
+      return {
+        messages: {
+          ...state.messages,
+          [channelId]: [...channelMessages, message],
+        },
+      };
+    }),
+
+  // Replace a pending (optimistic) message with the real server-confirmed message
+  confirmOptimisticMessage: (channelId, tempId, realMessage) =>
+    set((state) => {
+      const channelMessages = state.messages[channelId] || [];
+      // If real message already exists (socket broadcast arrived first), just remove temp
+      const hasReal = channelMessages.some((m) => m.id === realMessage.id);
+      const filtered = channelMessages.filter((m) => m.id !== tempId);
+      return {
+        messages: {
+          ...state.messages,
+          [channelId]: hasReal ? filtered : [...filtered, realMessage],
+        },
+      };
+    }),
+
+  // Remove a pending message on failure
+  removeOptimisticMessage: (channelId, tempId) =>
+    set((state) => {
+      const channelMessages = state.messages[channelId] || [];
+      return {
+        messages: {
+          ...state.messages,
+          [channelId]: channelMessages.filter((m) => m.id !== tempId),
+        },
+      };
+    }),
+
   addMessage: (channelId, message) =>
     set((state) => {
       const channelMessages = state.messages[channelId] || [];
-      // Prevent duplicate messages if already present
+      // Prevent duplicate messages (real message may already be added via optimistic)
       if (channelMessages.some((m) => m.id === message.id)) {
         return state;
       }
+      // Also remove any pending optimistic version of this message (matched by tempId in content+userId)
       return {
         messages: {
           ...state.messages,

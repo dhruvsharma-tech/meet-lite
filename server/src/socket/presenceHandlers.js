@@ -3,23 +3,37 @@ import prisma from '../prisma.js';
 // In-memory set of online user IDs
 export const onlineUserIds = new Set();
 
+// Cache: userId → serverIds[] — avoids repeated DB queries on connect/disconnect
+// Cleared on disconnect; max TTL not needed since socket lifecycle manages it
+const userServerCache = new Map();
+
+async function getUserServerIds(userId) {
+  if (userServerCache.has(userId)) {
+    return userServerCache.get(userId);
+  }
+  const memberships = await prisma.member.findMany({
+    where: { userId },
+    select: { serverId: true },
+  });
+  const serverIds = memberships.map((m) => m.serverId);
+  userServerCache.set(userId, serverIds);
+  return serverIds;
+}
+
 export function registerPresenceHandlers(io, socket) {
   const userId = socket.userId;
 
   // 1. Mark user as online
   onlineUserIds.add(userId);
 
-  // 2. Fetch all servers this user belongs to, join their rooms, and broadcast 'online' status
+  // 2. Fetch servers (cached), join rooms, broadcast 'online' status
   async function broadcastOnline() {
     try {
-      const memberships = await prisma.member.findMany({
-        where: { userId },
-        select: { serverId: true },
-      });
+      const serverIds = await getUserServerIds(userId);
 
-      for (const m of memberships) {
-        socket.join(m.serverId);
-        io.to(m.serverId).emit('presence:update', {
+      for (const serverId of serverIds) {
+        socket.join(serverId);
+        io.to(serverId).emit('presence:update', {
           userId,
           status: 'online',
         });
@@ -55,18 +69,17 @@ export function registerPresenceHandlers(io, socket) {
     }
   });
 
-  // 4. On disconnect, check if user has other sockets; if not, mark offline and broadcast
+  // 4. On disconnect, broadcast offline using cached server IDs (no DB query)
   socket.on('disconnect', async () => {
     onlineUserIds.delete(userId);
 
     try {
-      const memberships = await prisma.member.findMany({
-        where: { userId },
-        select: { serverId: true },
-      });
+      // Use cache — no DB round-trip on disconnect
+      const serverIds = userServerCache.get(userId) || [];
+      userServerCache.delete(userId); // clear cache on disconnect
 
-      for (const m of memberships) {
-        io.to(m.serverId).emit('presence:update', {
+      for (const serverId of serverIds) {
+        io.to(serverId).emit('presence:update', {
           userId,
           status: 'offline',
         });

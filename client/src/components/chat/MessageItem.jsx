@@ -18,7 +18,7 @@ function formatMessageDate(dateString) {
 }
 
 export default function MessageItem({ message, isCompact }) {
-  const { user, content, createdAt } = message;
+  const { user, content, createdAt, pending } = message;
 
   const initials = user?.name
     ? user.name
@@ -29,14 +29,20 @@ export default function MessageItem({ message, isCompact }) {
         .toUpperCase()
     : 'U';
 
+  // Pending = optimistic message still being saved to DB
+  const textClass = pending
+    ? 'text-sm text-[#dbdee1]/50 italic break-words whitespace-pre-wrap leading-relaxed'
+    : 'text-sm text-[#dbdee1] break-words whitespace-pre-wrap leading-relaxed';
+
   if (isCompact) {
     return (
       <div className="group relative flex items-baseline py-0.5 px-4 hover:bg-[#2e3035]/50 transition-colors">
         <span className="w-12 text-[10px] text-[#80848e] text-right pr-3 opacity-0 group-hover:opacity-100 select-none">
           {format(new Date(createdAt), 'h:mm')}
         </span>
-        <div className="flex-1 text-sm text-[#dbdee1] break-words whitespace-pre-wrap">
+        <div className={textClass}>
           {content}
+          {pending && <span className="ml-2 text-[10px] not-italic text-[#80848e]">sending…</span>}
         </div>
       </div>
     );
@@ -45,7 +51,7 @@ export default function MessageItem({ message, isCompact }) {
   return (
     <div className="group relative flex items-start gap-4 py-1.5 px-4 mt-2 hover:bg-[#2e3035]/50 transition-colors">
       {/* Avatar */}
-      <div className="w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center font-bold text-xs text-white shrink-0 select-none overflow-hidden mt-0.5">
+      <div className={`w-10 h-10 rounded-full bg-[#5865f2] flex items-center justify-center font-bold text-xs text-white shrink-0 select-none overflow-hidden mt-0.5 ${pending ? 'opacity-50' : ''}`}>
         {user?.avatar ? (
           <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
         ) : (
@@ -60,10 +66,10 @@ export default function MessageItem({ message, isCompact }) {
             {user?.name || 'Unknown User'}
           </span>
           <span className="text-[11px] text-[#949ba4] select-none">
-            {formatMessageDate(createdAt)}
+            {pending ? 'sending…' : formatMessageDate(createdAt)}
           </span>
         </div>
-        <div className="text-sm text-[#dbdee1] break-words whitespace-pre-wrap leading-relaxed">
+        <div className={textClass}>
           {content}
         </div>
       </div>

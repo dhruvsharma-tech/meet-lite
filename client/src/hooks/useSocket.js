@@ -8,6 +8,9 @@ export function useSocket(channelId) {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const addMessage = useChatStore((state) => state.addMessage);
+  const addOptimisticMessage = useChatStore((state) => state.addOptimisticMessage);
+  const confirmOptimisticMessage = useChatStore((state) => state.confirmOptimisticMessage);
+  const removeOptimisticMessage = useChatStore((state) => state.removeOptimisticMessage);
   const setTypingUser = useChatStore((state) => state.setTypingUser);
   const updateMemberPresence = useServerStore((state) => state.updateMemberPresence);
 
@@ -28,7 +31,7 @@ export function useSocket(channelId) {
     // Join channel
     socket.emit('channel:join', { channelId });
 
-    // Handle new incoming messages
+    // Handle new incoming messages (from server broadcast — may include our own confirmed msg)
     const handleNewMessage = (message) => {
       if (message.channelId === channelId) {
         addMessage(channelId, message);
@@ -68,9 +71,9 @@ export function useSocket(channelId) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [channelId, user?.id, addMessage, setTypingUser, updateMemberPresence]);
+  }, [channelId, user?.id, addMessage, addOptimisticMessage, setTypingUser, updateMemberPresence]);
 
-  // Send message helper
+  // Send message with optimistic update
   const sendMessage = useCallback(
     (content) => {
       if (!channelId || !content.trim()) return;
@@ -84,12 +87,37 @@ export function useSocket(channelId) {
         clearTimeout(typingTimeoutRef.current);
       }
 
-      socket.emit('message:send', {
+      // 1. Create a temporary optimistic message — shown instantly in UI
+      const tempId = `temp_${Date.now()}_${Math.random()}`;
+      const optimisticMessage = {
+        id: tempId,
         channelId,
         content: content.trim(),
+        createdAt: new Date().toISOString(),
+        pending: true,          // used by MessageItem to show "sending..." style
+        user: {
+          id: user?.id,
+          name: user?.name || 'You',
+          avatar: user?.avatar || null,
+        },
+      };
+
+      // 2. Show message instantly
+      addOptimisticMessage(channelId, optimisticMessage);
+
+      // 3. Send to server — use acknowledgment callback
+      socket.emit('message:send', { channelId, content: content.trim() }, (response) => {
+        if (response?.ok && response?.message) {
+          // Server confirmed — swap temp with real message
+          confirmOptimisticMessage(channelId, tempId, response.message);
+        } else {
+          // Server rejected — remove temp message and show subtle error
+          removeOptimisticMessage(channelId, tempId);
+          console.warn('[Chat] Message failed:', response?.error);
+        }
       });
     },
-    [channelId]
+    [channelId, user, addOptimisticMessage, confirmOptimisticMessage, removeOptimisticMessage]
   );
 
   // Debounced typing handler
