@@ -83,7 +83,7 @@ export default function VoiceControls({ onDisconnect }) {
           disabled={isMicLoading}
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isMicrophoneEnabled
-              ? 'bg-[#35373c] hover:bg-[#3f4147] text-white'
+              ? 'bg-[#23a55a] hover:bg-[#1f9250] text-white'
               : 'bg-[#f23f42] hover:bg-[#da373a] text-white'
           }`}
           title={isMicrophoneEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
@@ -104,7 +104,7 @@ export default function VoiceControls({ onDisconnect }) {
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isCameraEnabled
               ? 'bg-[#23a55a] hover:bg-[#1f9250] text-white'
-              : 'bg-[#35373c] hover:bg-[#3f4147] text-[#80848e]'
+              : 'bg-[#f23f42] hover:bg-[#da373a] text-white'
           }`}
           title={isCameraEnabled ? 'Turn Off Camera' : 'Turn On Camera'}
         >

@@ -14,3 +14,4 @@ start "" %CHROME_PATH% --user-data-dir="%TEMP%\meet_user3" --use-fake-device-for
 start "" %CHROME_PATH% --user-data-dir="%TEMP%\meet_user4" --use-fake-device-for-media-stream --use-fake-ui-for-media-stream "http://localhost:5173"
 
 echo Done! 3 browser windows opened. Each has its own fake webcam and fresh session.
+

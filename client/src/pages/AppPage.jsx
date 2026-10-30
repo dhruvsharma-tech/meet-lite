@@ -162,15 +162,15 @@ export default function AppPage() {
             </p>
           </div>
         ) : activeChannel.type === 'TEXT' ? (
-          /* State C: TEXT Channel -> ChatPanel + MemberList */
-          <>
+          /* State C: TEXT Channel -> ChatPanel (left) + MemberList (right sidebar) */
+          <div className="flex-1 flex flex-row overflow-hidden w-full h-full">
             <ChatPanel
               key={activeChannel.id}
               channelId={activeChannel.id}
               channelName={activeChannel.name}
             />
             <MemberList serverId={serverId} />
-          </>
+          </div>
         ) : (
           /* State D: VOICE Channel -> VoiceRoom LiveKit */
           <VoiceRoom
