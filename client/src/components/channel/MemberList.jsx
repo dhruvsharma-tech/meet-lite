@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Crown, X } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useServerStore } from '../../store/serverStore';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../common/ConfirmModal';
 
 const EMPTY_MEMBERS = [];
 
@@ -15,6 +16,18 @@ export default function MemberList({ serverId }) {
   const currentUser = useAuthStore((state) => state.user);
   const currentMember = members.find((m) => m.user?.id === currentUser?.id);
   const isOwner = currentMember?.role === 'OWNER';
+
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: '',
+    onConfirm: null,
+  });
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
+  };
 
   useEffect(() => {
     if (!serverId || !isMemberListOpen) return;
@@ -29,15 +42,23 @@ export default function MemberList({ serverId }) {
   const online = members.filter((m) => m.user?.isOnline);
   const offline = members.filter((m) => !m.user?.isOnline);
 
-  async function handleKick(memberId, memberName) {
-    if (!confirm(`Kick ${memberName}?`)) return;
-    try {
-      await api.delete(`/api/servers/${serverId}/members/${memberId}`);
-      setMembers(members.filter((m) => m.id !== memberId));
-      toast.success(`${memberName} kicked`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to kick member');
-    }
+  function promptKick(memberId, memberName) {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Kick Member',
+      message: `Are you sure you want to kick ${memberName} from this server? They will not be able to rejoin without an invite link.`,
+      confirmText: 'Kick Member',
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await api.delete(`/api/servers/${serverId}/members/${memberId}`);
+          setMembers(members.filter((m) => m.id !== memberId));
+          toast.success(`${memberName} kicked`);
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Failed to kick member');
+        }
+      },
+    });
   }
 
   function MemberRow({ member }) {
@@ -76,7 +97,7 @@ export default function MemberList({ serverId }) {
         {/* Kick button — only visible on hover for owners */}
         {canKick && (
           <button
-            onClick={() => handleKick(member.id, member.user?.name)}
+            onClick={() => promptKick(member.id, member.user?.name)}
             className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-[#f23f42]/20 text-[#f23f42] transition-opacity cursor-pointer"
             title="Kick member"
           >
@@ -114,6 +135,17 @@ export default function MemberList({ serverId }) {
           <p className="text-xs text-[#80848e] px-2 mt-2">No members found</p>
         )}
       </div>
+
+      {/* Styled Kick Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText={confirmConfig.confirmText}
+        type="danger"
+      />
     </div>
   );
 }

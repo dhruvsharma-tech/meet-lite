@@ -16,6 +16,7 @@ import serverService from '../../services/serverService';
 import channelService from '../../services/channelService';
 import api from '../../services/api';
 import ChannelItem from './ChannelItem';
+import ConfirmModal from '../common/ConfirmModal';
 
 export default function ChannelSidebar() {
   const navigate = useNavigate();
@@ -32,6 +33,18 @@ export default function ChannelSidebar() {
   const setInviteModalOpen = useUIStore((state) => state.setInviteModalOpen);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: '',
+    type: 'danger',
+    onConfirm: null,
+  });
+
+  const closeConfirm = () => {
+    setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
+  };
 
   // Check if current user is server owner
   const isOwner = currentServer?.ownerId === user?.id;
@@ -39,47 +52,76 @@ export default function ChannelSidebar() {
   const textChannels = channels.filter((c) => c.type === 'TEXT');
   const voiceChannels = channels.filter((c) => c.type === 'VOICE');
 
-  const handleDeleteChannel = async (id) => {
-    if (!confirm('Are you sure you want to delete this channel?')) return;
-    try {
-      await channelService.deleteChannel(serverId, id);
-      removeChannel(id);
-      toast.success('Channel deleted.');
-      if (channelId === id) {
-        const remaining = channels.find((c) => c.id !== id);
-        if (remaining) {
-          navigate(`/app/${serverId}/${remaining.id}`);
-        } else {
-          navigate(`/app/${serverId}`);
+  const handleDeleteChannel = (id, name) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Delete Channel',
+      message: `Are you sure you want to delete #${name || 'this channel'}? All messages and attachments in this channel will be permanently removed.`,
+      confirmText: 'Delete Channel',
+      type: 'danger',
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await channelService.deleteChannel(serverId, id);
+          removeChannel(id);
+          toast.success('Channel deleted.');
+          if (channelId === id) {
+            const remaining = channels.find((c) => c.id !== id);
+            if (remaining) {
+              navigate(`/app/${serverId}/${remaining.id}`);
+            } else {
+              navigate(`/app/${serverId}`);
+            }
+          }
+        } catch {
+          toast.error('Failed to delete channel.');
         }
-      }
-    } catch {
-      toast.error('Failed to delete channel.');
-    }
+      },
+    });
   };
 
-  const handleDeleteServer = async () => {
-    if (!confirm(`Are you sure you want to delete "${currentServer?.name}"? This cannot be undone.`)) return;
-    try {
-      await serverService.deleteServer(serverId);
-      removeServer(serverId);
-      toast.success('Server deleted.');
-      navigate('/app');
-    } catch {
-      toast.error('Failed to delete server.');
-    }
+  const handleDeleteServer = () => {
+    setIsDropdownOpen(false);
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Delete Server',
+      message: `Are you sure you want to delete "${currentServer?.name}"? All channels, voice rooms, and history will be permanently deleted. This cannot be undone.`,
+      confirmText: 'Delete Server',
+      type: 'danger',
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await serverService.deleteServer(serverId);
+          removeServer(serverId);
+          toast.success('Server deleted.');
+          navigate('/app');
+        } catch {
+          toast.error('Failed to delete server.');
+        }
+      },
+    });
   };
 
-  const handleLeaveServer = async () => {
-    if (!confirm(`Are you sure you want to leave "${currentServer?.name}"?`)) return;
-    try {
-      await serverService.leaveServer(serverId);
-      removeServer(serverId);
-      toast.success('Left server.');
-      navigate('/app');
-    } catch {
-      toast.error('Failed to leave server.');
-    }
+  const handleLeaveServer = () => {
+    setIsDropdownOpen(false);
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Leave Server',
+      message: `Are you sure you want to leave "${currentServer?.name}"? You will need an invite link to rejoin this server.`,
+      confirmText: 'Leave Server',
+      type: 'danger',
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await serverService.leaveServer(serverId);
+          removeServer(serverId);
+          toast.success('Left server.');
+          navigate('/app');
+        } catch {
+          toast.error('Failed to leave server.');
+        }
+      },
+    });
   };
 
   const handleLogout = () => {
@@ -257,6 +299,17 @@ export default function ChannelSidebar() {
           </button>
         </div>
       </div>
+
+      {/* Styled Confirmation Modal (No ugly browser alert) */}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={closeConfirm}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText={confirmConfig.confirmText}
+        type={confirmConfig.type}
+      />
     </aside>
   );
 }

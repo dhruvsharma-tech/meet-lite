@@ -32,7 +32,7 @@ export default function ChannelItem({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onDelete(id);
+            onDelete(id, name);
           }}
           className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#f23f42] text-[#80848e] transition-opacity cursor-pointer"
           title="Delete Channel"
