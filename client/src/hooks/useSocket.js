@@ -4,7 +4,7 @@ import { useChatStore } from '../store/chatStore';
 import { useAuthStore } from '../store/authStore';
 import { useServerStore } from '../store/serverStore';
 
-export function useSocket(channelId) {
+export function useSocket(channelId, serverId) {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const addMessage = useChatStore((state) => state.addMessage);
@@ -13,6 +13,7 @@ export function useSocket(channelId) {
   const removeOptimisticMessage = useChatStore((state) => state.removeOptimisticMessage);
   const setTypingUser = useChatStore((state) => state.setTypingUser);
   const updateMemberPresence = useServerStore((state) => state.updateMemberPresence);
+  const setOnlineUsers = useServerStore((state) => state.setOnlineUsers);
 
   const typingTimeoutRef = useRef(null);
   const isTypingRef = useRef(false);
@@ -50,7 +51,7 @@ export function useSocket(channelId) {
     socket.on('message:new', handleNewMessage);
     socket.on('typing:update', handleTypingUpdate);
 
-    // Presence updates from server
+    // Presence updates from server (real-time join/leave)
     const handlePresenceUpdate = ({ userId, status }) => {
       updateMemberPresence(userId, status);
     };
@@ -72,6 +73,29 @@ export function useSocket(channelId) {
       }
     };
   }, [channelId, user?.id, addMessage, addOptimisticMessage, setTypingUser, updateMemberPresence]);
+
+  // Fetch initial presence list whenever serverId changes
+  useEffect(() => {
+    if (!serverId) return;
+
+    function requestPresence() {
+      socket.emit('presence:get', { serverId }, (data) => {
+        if (data?.onlineUserIds) {
+          setOnlineUsers(data.onlineUserIds);
+        }
+      });
+    }
+
+    if (socket.connected) {
+      requestPresence();
+    }
+
+    // Also re-request on reconnect (tab was in background, etc.)
+    socket.on('connect', requestPresence);
+    return () => {
+      socket.off('connect', requestPresence);
+    };
+  }, [serverId, setOnlineUsers]);
 
   // Send message with optimistic update
   const sendMessage = useCallback(

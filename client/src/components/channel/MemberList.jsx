@@ -4,6 +4,7 @@ import { useUIStore } from '../../store/uiStore';
 import { useServerStore } from '../../store/serverStore';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
+import socket from '../../socket';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../common/ConfirmModal';
 
@@ -13,6 +14,7 @@ export default function MemberList({ serverId }) {
   const isMemberListOpen = useUIStore((state) => state.isMemberListOpen);
   const members = useServerStore((state) => state.members) || EMPTY_MEMBERS;
   const setMembers = useServerStore.getState().setMembers;
+  const setOnlineUsers = useServerStore.getState().setOnlineUsers;
   const currentUser = useAuthStore((state) => state.user);
   const currentMember = members.find((m) => m.user?.id === currentUser?.id);
   const isOwner = currentMember?.role === 'OWNER';
@@ -32,15 +34,26 @@ export default function MemberList({ serverId }) {
   useEffect(() => {
     if (!serverId || !isMemberListOpen) return;
 
+    // 1. Fetch members from REST API (includes isOnline from server via onlineUserIds set)
     api.get(`/api/servers/${serverId}/members`).then((res) => {
       setMembers(res.data.members);
     }).catch(() => {});
+
+    // 2. Also ask socket for real-time presence snapshot to stay in sync
+    if (socket.connected) {
+      socket.emit('presence:get', { serverId }, (data) => {
+        if (data?.onlineUserIds) {
+          setOnlineUsers(data.onlineUserIds);
+        }
+      });
+    }
   }, [serverId, isMemberListOpen]);
 
   if (!isMemberListOpen) return null;
 
-  const online = members.filter((m) => m.user?.isOnline);
-  const offline = members.filter((m) => !m.user?.isOnline);
+  // Split by status field (set by server REST or by presence:update socket events)
+  const online = members.filter((m) => m.status === 'online' || m.user?.isOnline === true);
+  const offline = members.filter((m) => m.status !== 'online' && m.user?.isOnline !== true);
 
   function promptKick(memberId, memberName) {
     setConfirmConfig({
@@ -79,7 +92,7 @@ export default function MemberList({ serverId }) {
           {/* Online/Offline dot */}
           <span
             className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#2b2d31] ${
-              member.user?.isOnline ? 'bg-[#23a55a]' : 'bg-[#80848e]'
+              member.status === 'online' || member.user?.isOnline ? 'bg-[#23a55a]' : 'bg-[#80848e]'
             }`}
           />
         </div>

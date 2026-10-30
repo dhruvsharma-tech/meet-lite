@@ -1,5 +1,6 @@
 import prisma from '../prisma.js';
 import permissionCache from '../services/permissionCache.service.js';
+import { onlineUserIds } from '../socket/presenceHandlers.js';
 
 export async function getMembers(req, res, next) {
   try {
@@ -13,7 +14,19 @@ export async function getMembers(req, res, next) {
       orderBy: { createdAt: 'asc' },
     });
 
-    res.json({ members });
+    const membersWithPresence = members.map((m) => {
+      const isOnline = onlineUserIds.has(m.userId);
+      return {
+        ...m,
+        status: isOnline ? 'online' : 'offline',
+        user: {
+          ...m.user,
+          isOnline,
+        },
+      };
+    });
+
+    res.json({ members: membersWithPresence });
   } catch (err) {
     next(err);
   }

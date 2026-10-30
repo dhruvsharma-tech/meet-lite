@@ -42,13 +42,37 @@ export const useServerStore = create((set) => ({
 
   setMembers: (members) => set({ members }),
 
+  setOnlineUsers: (onlineUserIds = []) =>
+    set((state) => {
+      const onlineSet = new Set(onlineUserIds);
+      return {
+        members: state.members.map((m) => {
+          const uid = m.userId || m.user?.id;
+          const isOnline = onlineSet.has(uid);
+          return {
+            ...m,
+            status: isOnline ? 'online' : 'offline',
+            isOnline,
+            user: m.user ? { ...m.user, isOnline } : { isOnline },
+          };
+        }),
+      };
+    }),
+
   updateMemberPresence: (userId, status) =>
     set((state) => ({
-      members: state.members.map((m) =>
-        m.userId === userId || m.user?.id === userId
-          ? { ...m, status }
-          : m
-      ),
+      members: state.members.map((m) => {
+        if (m.userId === userId || m.user?.id === userId) {
+          const isOnline = status === 'online';
+          return {
+            ...m,
+            status,
+            isOnline,
+            user: m.user ? { ...m.user, isOnline } : { isOnline },
+          };
+        }
+        return m;
+      }),
     })),
 }));
 

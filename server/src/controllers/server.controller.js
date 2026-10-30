@@ -1,5 +1,6 @@
 import { validationResult } from 'express-validator';
 import prisma from '../prisma.js';
+import { onlineUserIds } from '../socket/presenceHandlers.js';
 
 // ─── POST /api/servers ────────────────────────────────────────────────────────
 // Create server, create default #general TEXT channel, add creator as OWNER
@@ -89,7 +90,22 @@ export async function getServers(req, res, next) {
       orderBy: { createdAt: 'asc' },
     });
 
-    return res.json({ servers });
+    const enrichedServers = servers.map((s) => ({
+      ...s,
+      members: (s.members || []).map((m) => {
+        const isOnline = onlineUserIds.has(m.userId);
+        return {
+          ...m,
+          status: isOnline ? 'online' : 'offline',
+          user: {
+            ...m.user,
+            isOnline,
+          },
+        };
+      }),
+    }));
+
+    return res.json({ servers: enrichedServers });
   } catch (err) {
     next(err);
   }
@@ -120,10 +136,25 @@ export async function getServerById(req, res, next) {
       return res.status(404).json({ error: 'Server not found' });
     }
 
+    const membersWithPresence = (server.members || []).map((m) => {
+      const isOnline = onlineUserIds.has(m.userId);
+      return {
+        ...m,
+        status: isOnline ? 'online' : 'offline',
+        user: {
+          ...m.user,
+          isOnline,
+        },
+      };
+    });
+
     return res.json({
-      server,
+      server: {
+        ...server,
+        members: membersWithPresence,
+      },
       channels: server.channels,
-      members: server.members,
+      members: membersWithPresence,
     });
   } catch (err) {
     next(err);

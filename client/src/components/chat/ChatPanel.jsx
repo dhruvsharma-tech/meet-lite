@@ -1,4 +1,5 @@
 import { Hash, Users } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { useSocket } from '../../hooks/useSocket';
 import { useUIStore } from '../../store/uiStore';
 import MessageList from './MessageList';
@@ -6,7 +7,8 @@ import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
 
 export default function ChatPanel({ channelId, channelName }) {
-  const { sendMessage, handleTyping } = useSocket(channelId);
+  const { serverId } = useParams();
+  const { sendMessage, handleTyping } = useSocket(channelId, serverId);
   const toggleMemberList = useUIStore((state) => state.toggleMemberList);
   const isMemberListOpen = useUIStore((state) => state.isMemberListOpen);
 
