@@ -32,13 +32,23 @@ export default {
         },
         'marquee': {
           '0%': { transform: 'translateX(0)' },
-          '100%': { transform: 'translateX(-50%)' },
+          '100%': { transform: 'translateX(-33.33%)' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-12px)' },
+        },
+        'glow-pulse': {
+          '0%, 100%': { opacity: '0.3' },
+          '50%': { opacity: '0.7' },
         },
       },
       animation: {
         'fade-in': 'fade-in 150ms ease-out',
         'bounce-dot': 'bounce-dot 1s infinite ease-in-out',
-        'marquee': 'marquee 20s linear infinite',
+        'marquee': 'marquee 28s linear infinite',
+        'float': 'float 5s ease-in-out infinite',
+        'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
       },
     },
   },
