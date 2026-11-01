@@ -5,7 +5,7 @@ import app from './src/app.js';
 import { initSocketIO } from './src/socket/index.js';
 
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const CLIENT_URL = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
 
 // Create HTTP server from Express app
 const httpServer = createServer(app);

@@ -12,7 +12,7 @@ import memberRouter from './routes/member.routes.js';
 import livekitRouter from './routes/livekit.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const CLIENT_URL = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
 
 const app = express();
 
