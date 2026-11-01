@@ -1,146 +1,201 @@
 # Meet Lite
 
-A minimal, high-performance 1-on-1 video calling application with real-time text chat, powered by pure Peer-to-Peer (P2P) WebRTC and Socket.IO signaling.
+A modern, high-performance real-time community communication platform inspired by Discord. Built for seamless team collaboration, low-latency group voice/video rooms, screen sharing, persistent channel-based chat, and granular server management.
 
 ---
 
-## Features
+## ✨ Features
 
-- **Instant 1-on-1 Video Calling**: Low-latency, direct browser-to-browser media streaming via WebRTC.
-- **Real-Time Chat**: Live messaging alongside video with auto-scrolling, distinct bubbles for own vs. peer messages, and plain-text sanitization.
-- **System Presence Notifications**: Instant alerts when a peer joins or leaves the room.
-- **Media Controls**: Seamless mic mute/unmute and camera toggle without restarting streams.
-- **Clean Disconnect & Rejoin Handling**: Reconnection recovery when a participant refreshes or rejoins, reverting to a waiting state when a peer leaves.
-- **Strict 2-User Room Limit**: Enforced server-side (`ROOM_FULL`) to maintain P2P mesh performance without heavy server infrastructure.
-- **Responsive Layout**: Mobile-friendly interface (video on top, chat below, floating controls with collision-free local video preview).
+### 🎙️ Multi-User Voice & Video Rooms
+- **SFU-Powered Media Streaming**: Low-latency multi-participant voice, high-definition video, and screen sharing powered by LiveKit Cloud SFU.
+- **Active Speaker & Grid Layout**: Dynamic participant grid prioritizing current speakers and active video streams with auto-paginated layouts.
+- **Media Toggles**: Instant microphone mute/unmute, webcam toggle, and screen share controls with real-time audio visualizers.
+
+### 💬 Real-Time Text Channels & Chat
+- **Instant Messaging**: Channel-based persistent messaging with real-time delivery via Socket.IO.
+- **Live Typing Indicators & Presence**: See who is typing in real time and view online/offline status dots across the member sidebar.
+- **Auto-Scrolling & Timestamps**: Clean Discord-themed chat bubbles, date dividers, and auto-scroll to the newest messages.
+
+### 🏰 Server & Channel Architecture
+- **Community Servers**: Create custom servers with custom icons and invite codes.
+- **Text & Voice Channels**: Organized channels categorized by communication type (`TEXT` and `VOICE`).
+- **Role-Based Permissions**: Distinct Owner and Member roles with administrative controls to manage channels, kick members, or delete servers.
+- **Shareable Invite Links**: Generate and copy direct server invite links (`/invite/:code`) for quick onboarding.
+
+### 🔐 Authentication & Security
+- **Secure Auth**: Email & password authentication with `bcryptjs` password hashing and HTTP-Only JWT cookies.
+- **Cross-Origin & Proxy Ready**: Built-in `SameSite=None; Secure` support and `trust proxy` for seamless production deployment across separate frontend/backend domains.
+- **Google OAuth Support**: Optional one-click Google Sign-In integration via Passport.js.
+
+### 🎨 Modern Discord-Inspired UI
+- **Responsive Dark Theme**: Polished dark aesthetic with custom scrollbars, subtle cosmic particle background, and fluid responsive design.
+- **Smooth Animations**: GSAP-driven interactive landing page, intuitive modal overlays, and toast feedback via `react-hot-toast`.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Frontend**: React 19, Vite, React Router 7, Tailwind CSS v3
-- **Backend**: Node.js (ES Modules), Express 5, Socket.IO
-- **Real-Time Protocols**: WebRTC (`RTCPeerConnection`), WebSocket (`socket.io`)
-- **STUN Server**: Google Public STUN (`stun:stun.l.google.com:19302`)
+| Area | Technologies |
+|---|---|
+| **Frontend** | React 19, Vite, Tailwind CSS v3, React Router 7, Zustand, Lucide React, GSAP |
+| **Backend** | Node.js (ES Modules), Express 5, Socket.IO, Passport.js |
+| **Database & ORM** | PostgreSQL (Neon Serverless), Prisma ORM |
+| **Media & Audio SFU**| LiveKit Cloud SFU (`livekit-client`, `livekit-server-sdk`) |
+| **Storage (Optional)**| Cloudinary (Avatar uploads) |
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```text
 meet-lite/
-├── server/
-│   ├── src/
-│   │   ├── app.js         # Express app config, CORS & health endpoint
-│   │   ├── rooms.js       # In-memory room store & auto-cleanup logic
-│   │   └── socket.js      # Socket.IO handlers & WebRTC signaling relay
-│   ├── server.js          # HTTP server & Socket.IO initialization
-│   ├── package.json
-│   └── .env.example
-├── client/
+├── client/                     # Frontend Single Page Application (React + Vite)
+│   ├── public/
+│   │   ├── _redirects         # SPA redirect fallback for Netlify/Cloudflare
+│   │   └── favicon.svg
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ChatPanel.jsx   # Realtime chat message list & input
-│   │   │   ├── Controls.jsx    # Mic/camera toggles & red Leave button
-│   │   │   └── VideoTile.jsx   # Video stream renderer with fallback avatar
-│   │   ├── hooks/
-│   │   │   └── useWebRTC.js    # Core WebRTC lifecycle, media & signaling
-│   │   ├── pages/
-│   │   │   ├── Home.jsx        # Landing page, name input, create/join room
-│   │   │   └── Room.jsx        # Video viewport, chat layout & connection status
-│   │   ├── socket.js           # Shared socket.io-client instance
-│   │   ├── App.jsx             # React router & base layout
-│   │   └── main.jsx            # Entry point (StrictMode disabled for WebRTC)
-│   ├── package.json
-│   └── .env.example
-├── prompt.md
-├── implementation.md
+│   │   │   ├── auth/          # ProtectedRoute, Auth guards
+│   │   │   ├── channel/       # ChannelSidebar, ChannelItem, MemberList
+│   │   │   ├── chat/          # ChatPanel, MessageList, MessageInput
+│   │   │   ├── common/        # ConfirmModal, UI dialogs
+│   │   │   ├── server/        # ServerList, ServerIcon, CreateServerModal, InviteModal
+│   │   │   └── voice/         # VoiceRoom, ParticipantGrid, Controls, TrackTile
+│   │   ├── hooks/             # useLiveKit signaling & track hooks
+│   │   ├── pages/             # LandingPage, LoginPage, RegisterPage, AppPage, InvitePage
+│   │   ├── services/          # Axios API layer (auth, server, channel)
+│   │   ├── store/             # Zustand stores (authStore, serverStore, uiStore)
+│   │   ├── socket.js          # Singleton Socket.IO client
+│   │   ├── App.jsx            # Application routing
+│   │   └── main.jsx           # Entry point
+│   ├── vercel.json            # Vercel SPA routing configuration
+│   └── vite.config.js         # Vite configuration with proxy & tunnel support
+│
+├── server/                     # Backend API & WebSocket Server
+│   ├── prisma/
+│   │   ├── schema.prisma      # PostgreSQL database schema (Users, Servers, Channels, Messages)
+│   │   └── migrations/        # Prisma migration history
+│   ├── src/
+│   │   ├── config/            # Passport & OAuth configurations
+│   │   ├── controllers/       # Auth, Server, Channel, Message, Invite, Member, LiveKit controllers
+│   │   ├── middleware/        # JWT authMiddleware, role checks, errorHandler
+│   │   ├── routes/            # Express REST route handlers
+│   │   ├── services/          # LiveKit token generator, Cloudinary upload helper
+│   │   ├── socket/            # Chat, typing, presence, and voice channel socket handlers
+│   │   ├── app.js             # Express application & CORS setup
+│   │   └── prisma.js          # Prisma Client singleton
+│   ├── server.js              # HTTP server & Socket.IO initialization
+│   └── package.json           # Backend dependencies and scripts
+│
+├── .gitignore
 └── README.md
 ```
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
-### 1. Prerequisites
+### Prerequisites
 - [Node.js](https://nodejs.org/) (v18 or higher recommended)
-- `npm`
-
-### 2. Setup Server
-
-```bash
-cd server
-npm install
-cp .env.example .env
-npm start
-```
-*Server will start on `http://localhost:5000` (verifiable via `http://localhost:5000/health`).*
-
-### 3. Setup Client
-
-In a separate terminal:
-
-```bash
-cd client
-npm install
-cp .env.example .env
-npm run dev
-```
-*Client will be available at `http://localhost:5173`.*
+- [PostgreSQL Database](https://neon.tech) (Free serverless PostgreSQL from Neon)
+- [LiveKit Cloud Account](https://livekit.io/) (Free tier available for SFU voice & video)
 
 ---
 
-## WebRTC Signaling Flow (How It Works)
+### 1. Backend Setup
 
-1. **User A creates a room** (`create-room`), gets a random 8-character ID, and enters the room.
-2. **User B enters the room** (`join-room`). The server acknowledges and notifies User A (`user-joined`).
-3. **User A creates an SDP Offer**: Adds local media tracks, calls `pc.createOffer()`, sets local description, and relays it to User B.
-4. **User B receives the Offer**: Sets remote description, adds local tracks, creates an SDP Answer (`pc.createAnswer()`), sets local description, and relays it back.
-5. **User A receives the Answer**: Sets remote description.
-6. **ICE Candidates are exchanged**: Both peers gather network routes via Google STUN and send `ice-candidate` events through the server.
-7. **Direct P2P Media Established**: Browsers establish a direct, encrypted audio/video peer connection bypassing the server.
+1. Open a terminal and navigate to the `server/` directory:
+   ```bash
+   cd server
+   ```
 
----
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-## Socket Events Reference
+3. Configure environment variables:
+   Copy `.env.example` to `.env` and fill in your credentials:
+   ```bash
+   cp .env.example .env
+   ```
+   *Required variables in `server/.env`:*
+   ```env
+   PORT=5000
+   CLIENT_URL=http://localhost:5173
+   DATABASE_URL="postgresql://user:password@ep-xyz.neon.tech/neondb?sslmode=require"
+   JWT_SECRET=your_super_secret_jwt_key
+   LIVEKIT_API_KEY=your_livekit_api_key
+   LIVEKIT_API_SECRET=your_livekit_api_secret
+   LIVEKIT_URL=wss://your-project.livekit.cloud
+   NODE_ENV=development
+   ```
 
-| Event Name | Direction | Payload | Description |
-|---|---|---|---|
-| `create-room` | Client ➔ Server | `cb({ ok, roomId })` | Generates a new random room ID |
-| `join-room` | Client ➔ Server | `{ roomId, name }, cb` | Adds user to room (max 2), returns participant list |
-| `user-joined` | Server ➔ Client | `{ id, name }` | Informs existing user that a peer has joined |
-| `user-left` | Server ➔ Client | `{ id, name }` | Informs remaining user that the peer has disconnected |
-| `chat-message` | Bidirectional | `{ id, name, text, time }` | Broadcasts validated chat text to everyone in the room |
-| `offer` | Bidirectional (Relay) | `{ sdp, from }` | Relays WebRTC SDP Offer to the other peer |
-| `answer` | Bidirectional (Relay) | `{ sdp, from }` | Relays WebRTC SDP Answer to the other peer |
-| `ice-candidate` | Bidirectional (Relay) | `{ candidate, from }` | Relays network routing candidates |
-| `leave-room` | Client ➔ Server | `none` | Explicitly removes user from the active room |
+4. Initialize database schema:
+   ```bash
+   npx prisma db push
+   ```
 
----
-
-## Architectural Limitations
-
-- **No TURN Server**: Only uses Google STUN. Call connectivity may fail if both peers are behind symmetric NATs or strict corporate firewalls.
-- **No User Authentication**: Uses anonymous sessions with optional display names.
-- **In-Memory State**: Room records are kept in memory (a server restart resets all active rooms).
-- **Max 2 Participants**: Designed exclusively for 1-on-1 calls to avoid the exponential bandwidth and CPU overhead of a full mesh topology.
-
----
-
-## Future Improvements
-
-- [ ] **TURN Server Integration**: Add Coturn or Xirsys for guaranteed relay fallback.
-- [ ] **Authentication & Security**: Add JWT or room access passwords.
-- [ ] **Persistent Storage**: Back rooms with Redis or PostgreSQL.
-- [ ] **SFU Architecture**: Migrate to mediasoup or LiveKit to support group calls with 3+ users efficiently.
-- [ ] **Screen Sharing**: Add `getDisplayMedia` support for desktop screen capture.
+5. Start the backend development server:
+   ```bash
+   npm run dev
+   ```
+   *The API and WebSocket server will run on `http://localhost:5000`.*
 
 ---
 
-## Interview Talking Points
+### 2. Frontend Setup
 
-- *"I built the signaling server with Socket.IO, while media streams directly peer-to-peer via WebRTC."*
-- *"The existing room participant creates the offer, the joining participant answers, and both exchange ICE candidates via the server relay."*
-- *"I queued early-arriving ICE candidates until `setRemoteDescription` completed to avoid SDP race conditions."*
-- *"Local media tracks are enabled/disabled via `track.enabled` rather than stopping them, ensuring instant camera and mic resumption."*
-- *"I disabled React 18 `StrictMode` on the client to prevent double-invoking media device requests and socket listeners during development."*
+1. Open a second terminal and navigate to the `client/` directory:
+   ```bash
+   cd client
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure environment variables:
+   Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+   *Required variables in `client/.env`:*
+   ```env
+   VITE_API_URL=http://localhost:5000
+   VITE_SOCKET_URL=http://localhost:5000
+   VITE_LIVEKIT_URL=wss://your-project.livekit.cloud
+   ```
+
+4. Start the frontend development server:
+   ```bash
+   npm run dev
+   ```
+   *Open [http://localhost:5173](http://localhost:5173) in your browser.*
+
+---
+
+## 🌐 Production Deployment
+
+### Frontend (Vercel)
+- Connect your GitHub repository to [Vercel](https://vercel.com).
+- Set **Root Directory** to `client`.
+- Add Environment Variables:
+  - `VITE_API_URL` = `https://your-backend.onrender.com`
+  - `VITE_SOCKET_URL` = `https://your-backend.onrender.com`
+  - `VITE_LIVEKIT_URL` = `wss://your-project.livekit.cloud`
+- The included `client/vercel.json` and `client/public/_redirects` automatically handle client-side routing.
+
+### Backend (Render / Railway)
+- Create a new Web Service on [Render](https://render.com) or [Railway](https://railway.app).
+- Set **Root Directory** to `server`.
+- **Build Command**: `npm install && npm run build`
+- **Start Command**: `npm start`
+- Add production environment variables (`DATABASE_URL`, `JWT_SECRET`, `LIVEKIT_*`, `CLIENT_URL=https://your-app.vercel.app`, `NODE_ENV=production`).
+
+---
+
+## 📄 License
+
+This project is open-source and available under the [MIT License](LICENSE).
