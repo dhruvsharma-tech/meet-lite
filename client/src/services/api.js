@@ -13,10 +13,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
+      useAuthStore.getState().clearUser();
       const currentPath = window.location.pathname;
-      // Do not redirect if user is already attempting login or registration
-      if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
-        useAuthStore.getState().clearUser();
+      // Only redirect to login if the user was inside protected application routes (/app)
+      if (currentPath.startsWith('/app')) {
         window.location.href = '/login';
       }
     }
@@ -25,4 +25,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
