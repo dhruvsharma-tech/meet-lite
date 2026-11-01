@@ -46,7 +46,6 @@ export default function InviteModal() {
 
   useEffect(() => {
     if (!isOpen || !currentServer?.id) {
-      setCopied(false);
       return;
     }
 
@@ -63,7 +62,7 @@ export default function InviteModal() {
         const fullUrl = `${window.location.origin}/invite/${code}`;
         setInviteCode(code);
         setInviteUrl(fullUrl);
-      } catch (err) {
+      } catch {
         if (!isMounted) return;
         toast.error('Failed to generate invite link');
       } finally {

@@ -14,7 +14,12 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin) || origin === CLIENT_URL) {
+      if (
+        !origin ||
+        /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin) ||
+        origin === CLIENT_URL ||
+        origin.endsWith('.trycloudflare.com')
+      ) {
         return callback(null, true);
       }
       return callback(null, false);

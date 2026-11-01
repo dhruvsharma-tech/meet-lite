@@ -13,8 +13,8 @@ const EMPTY_MEMBERS = [];
 export default function MemberList({ serverId }) {
   const isMemberListOpen = useUIStore((state) => state.isMemberListOpen);
   const members = useServerStore((state) => state.members) || EMPTY_MEMBERS;
-  const setMembers = useServerStore.getState().setMembers;
-  const setOnlineUsers = useServerStore.getState().setOnlineUsers;
+  const setMembers = useServerStore((state) => state.setMembers);
+  const setOnlineUsers = useServerStore((state) => state.setOnlineUsers);
   const currentUser = useAuthStore((state) => state.user);
   const currentMember = members.find((m) => m.user?.id === currentUser?.id);
   const isOwner = currentMember?.role === 'OWNER';
@@ -47,7 +47,7 @@ export default function MemberList({ serverId }) {
         }
       });
     }
-  }, [serverId, isMemberListOpen]);
+  }, [serverId, isMemberListOpen, setMembers, setOnlineUsers]);
 
   if (!isMemberListOpen) return null;
 
@@ -79,7 +79,7 @@ export default function MemberList({ serverId }) {
     const canKick = isOwner && !isCurrentUser && member.role !== 'OWNER';
 
     return (
-      <div className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[#35373c] group cursor-default select-none">
+      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 group cursor-default select-none transition-colors">
         {/* Avatar */}
         <div className="relative shrink-0">
           {member.user?.avatar ? (
@@ -91,7 +91,7 @@ export default function MemberList({ serverId }) {
           )}
           {/* Online/Offline dot */}
           <span
-            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#2b2d31] ${
+            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0c0d18] ${
               member.status === 'online' || member.user?.isOnline ? 'bg-[#23a55a]' : 'bg-[#80848e]'
             }`}
           />
@@ -122,7 +122,7 @@ export default function MemberList({ serverId }) {
   }
 
   return (
-    <div className="w-60 shrink-0 bg-[#2b2d31] flex flex-col overflow-hidden border-l border-[#1f2023]">
+    <div className="w-60 shrink-0 bg-[#0c0d18] flex flex-col overflow-hidden border-l border-white/5">
       <div className="px-3 pt-4 pb-2 flex-1 overflow-y-auto">
         {/* ONLINE */}
         {online.length > 0 && (

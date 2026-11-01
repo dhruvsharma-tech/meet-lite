@@ -16,6 +16,9 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 const app = express();
 
+// Trust reverse proxy (Render, Railway, Heroku) for HTTPS cookies & headers
+app.set('trust proxy', 1);
+
 // ─── Flexible CORS for Development & Production ───────────────────────────────
 
 const allowedOrigins = [
@@ -31,7 +34,11 @@ app.use(cors({
     // Allow non-browser requests (Postman, curl, server-to-server)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin) || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+    if (
+      allowedOrigins.includes(origin) ||
+      /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin) ||
+      origin.endsWith('.trycloudflare.com')
+    ) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Volume2, MessageSquare, Plus, Compass, Link as LinkIcon } from 'lucide-react';
+import { MessageSquare, Plus, Compass, Link as LinkIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServerStore } from '../store/serverStore';
 import { useUIStore } from '../store/uiStore';
@@ -18,16 +18,11 @@ export default function AppPage() {
   const { serverId, channelId } = useParams();
   const navigate = useNavigate();
 
-  const servers = useServerStore((state) => state.servers);
   const setServers = useServerStore((state) => state.setServers);
-  const currentServer = useServerStore((state) => state.currentServer);
   const setCurrentServer = useServerStore((state) => state.setCurrentServer);
   const channels = useServerStore((state) => state.channels);
 
   const openCreateServer = useUIStore((state) => state.openCreateServer);
-  const isMemberListOpen = useUIStore((state) => state.isMemberListOpen);
-
-  const [isLoading, setIsLoading] = useState(false);
 
   // 1. Load user servers on mount
   useEffect(() => {
@@ -50,7 +45,6 @@ export default function AppPage() {
     }
 
     async function loadServerDetails() {
-      setIsLoading(true);
       try {
         const data = await serverService.getServer(serverId);
         setCurrentServer(data.server);
@@ -63,19 +57,17 @@ export default function AppPage() {
         console.error('Failed to load server details:', err);
         toast.error(err.response?.data?.message || 'Failed to load server');
         navigate('/app', { replace: true });
-      } finally {
-        setIsLoading(false);
       }
     }
 
     loadServerDetails();
-  }, [serverId, setCurrentServer, navigate]);
+  }, [serverId, channelId, setCurrentServer, navigate]);
 
   // Find active channel
   const activeChannel = channels.find((c) => c.id === channelId);
 
   return (
-    <div className="flex h-screen w-full bg-[#313338] text-[#f2f3f5] overflow-hidden select-none font-sans">
+    <div className="flex h-screen w-full bg-[#090a14] text-[#f2f3f5] overflow-hidden select-none font-sans">
       {/* Panel 1: Server List (72px) */}
       <ServerList />
 
@@ -83,15 +75,18 @@ export default function AppPage() {
       {serverId && <ChannelSidebar />}
 
       {/* Panel 3: Main Content Viewport */}
-      <main className="flex-1 flex flex-col bg-[#313338] overflow-hidden relative">
+      <main className="flex-1 flex flex-col bg-[#0c0e1a] overflow-hidden relative app-cosmic-bg">
         {/* State A: No Server Selected */}
         {!serverId ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
-            <div className="w-16 h-16 rounded-3xl bg-[#5865f2]/20 text-[#5865f2] flex items-center justify-center mb-4 shadow-inner">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto app-cosmic-bg relative z-10">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5865f2]/15 border border-[#5865f2]/30 text-xs font-semibold text-[#a78bfa] mb-4 shadow-[0_0_15px_rgba(88,101,242,0.2)]">
+              ✦ Welcome to Your Space
+            </span>
+            <div className="w-16 h-16 rounded-3xl bg-[#5865f2]/20 text-[#5865f2] flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(88,101,242,0.25)] border border-[#5865f2]/30">
               <Compass className="w-9 h-9" />
             </div>
             <h2 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Welcome to Meet-Lite!</h2>
-            <p className="text-sm text-[#b5bac1] max-w-md mb-8 leading-relaxed">
+            <p className="text-sm text-[#949ba4] max-w-md mb-8 leading-relaxed">
               Your space to talk, stream, and hang out with friends. Choose how you want to get started:
             </p>
 
@@ -100,7 +95,7 @@ export default function AppPage() {
               {/* Card 1: Create My Own Server */}
               <div
                 onClick={() => openCreateServer('CREATE')}
-                className="group p-6 bg-[#2b2d31] hover:bg-[#35373c] border border-[#1f2023] hover:border-[#5865f2]/50 rounded-2xl transition-all duration-200 cursor-pointer shadow-lg hover:shadow-xl flex flex-col justify-between"
+                className="group p-6 bg-[#15172b]/85 hover:bg-[#1a1d36] border border-white/10 hover:border-[#5865f2]/60 rounded-2xl transition-all duration-200 cursor-pointer shadow-xl hover:shadow-[0_12px_32px_rgba(88,101,242,0.2)] flex flex-col justify-between backdrop-blur-md"
               >
                 <div>
                   <div className="w-12 h-12 rounded-2xl bg-[#5865f2]/20 group-hover:bg-[#5865f2] text-[#5865f2] group-hover:text-white flex items-center justify-center mb-4 transition-colors">
@@ -108,7 +103,7 @@ export default function AppPage() {
                   </div>
                   <h3 className="text-lg font-bold text-white mb-1.5 flex items-center gap-2">
                     Create My Own Server
-                    <span className="text-[11px] font-semibold text-[#5865f2] bg-[#5865f2]/10 px-2 py-0.5 rounded-full">Owner</span>
+                    <span className="text-[11px] font-semibold text-[#5865f2] bg-[#5865f2]/15 px-2 py-0.5 rounded-full border border-[#5865f2]/25">Owner</span>
                   </h3>
                   <p className="text-xs text-[#949ba4] leading-relaxed mb-6">
                     Start your own custom space for friends, study groups, or communities. You have full control over channels and roles.
@@ -126,7 +121,7 @@ export default function AppPage() {
               {/* Card 2: Join a Server */}
               <div
                 onClick={() => openCreateServer('JOIN')}
-                className="group p-6 bg-[#2b2d31] hover:bg-[#35373c] border border-[#1f2023] hover:border-[#23a55a]/50 rounded-2xl transition-all duration-200 cursor-pointer shadow-lg hover:shadow-xl flex flex-col justify-between"
+                className="group p-6 bg-[#15172b]/85 hover:bg-[#1a1d36] border border-white/10 hover:border-[#23a55a]/60 rounded-2xl transition-all duration-200 cursor-pointer shadow-xl hover:shadow-[0_12px_32px_rgba(35,165,90,0.2)] flex flex-col justify-between backdrop-blur-md"
               >
                 <div>
                   <div className="w-12 h-12 rounded-2xl bg-[#23a55a]/20 group-hover:bg-[#23a55a] text-[#23a55a] group-hover:text-white flex items-center justify-center mb-4 transition-colors">
@@ -134,7 +129,7 @@ export default function AppPage() {
                   </div>
                   <h3 className="text-lg font-bold text-white mb-1.5 flex items-center gap-2">
                     Join an Existing Server
-                    <span className="text-[11px] font-semibold text-[#23a55a] bg-[#23a55a]/10 px-2 py-0.5 rounded-full">Invite</span>
+                    <span className="text-[11px] font-semibold text-[#23a55a] bg-[#23a55a]/15 px-2 py-0.5 rounded-full border border-[#23a55a]/25">Invite</span>
                   </h3>
                   <p className="text-xs text-[#949ba4] leading-relaxed mb-6">
                     Have an invite link or an 8-character code from a friend? Enter it here to immediately join their channels and calls.
@@ -152,18 +147,18 @@ export default function AppPage() {
           </div>
         ) : !activeChannel ? (
           /* State B: Server Selected but No Channel Selected */
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-[#2b2d31] text-[#80848e] flex items-center justify-center mb-4">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center app-cosmic-bg">
+            <div className="w-16 h-16 rounded-full bg-[#15172b] border border-white/10 text-[#a78bfa] flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(167,139,250,0.2)]">
               <MessageSquare className="w-8 h-8" />
             </div>
             <h3 className="text-lg font-bold text-white mb-1">No Channel Selected</h3>
-            <p className="text-xs text-[#b5bac1] max-w-sm">
+            <p className="text-xs text-[#949ba4] max-w-sm">
               Pick a text or voice channel from the sidebar on the left to start chatting!
             </p>
           </div>
         ) : activeChannel.type === 'TEXT' ? (
           /* State C: TEXT Channel -> ChatPanel (left) + MemberList (right sidebar) */
-          <div className="flex-1 flex flex-row overflow-hidden w-full h-full">
+          <div className="flex-1 flex flex-row overflow-hidden w-full h-full chat-cosmic-bg">
             <ChatPanel
               key={activeChannel.id}
               channelId={activeChannel.id}

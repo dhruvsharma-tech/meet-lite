@@ -1,4 +1,4 @@
-import { AlertTriangle, Trash2, LogOut, UserMinus, X } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
 
 export default function ConfirmModal({
   isOpen,

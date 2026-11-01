@@ -15,7 +15,7 @@ export default function ServerList() {
   const [hoveredAdd, setHoveredAdd] = useState(false);
 
   return (
-    <nav className="w-[72px] h-full bg-[#1e1f22] flex flex-col items-center py-3 select-none z-20 shrink-0 overflow-y-auto no-scrollbar">
+    <nav className="w-[72px] h-full bg-[#07080f] border-r border-white/5 flex flex-col items-center py-3 select-none z-20 shrink-0 overflow-y-auto no-scrollbar">
       {/* Home / Direct Messages Icon */}
       <div
         className="relative flex items-center justify-center w-full group cursor-pointer mb-2"

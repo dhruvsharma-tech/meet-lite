@@ -6,7 +6,9 @@
   "main": "server.js",
   "scripts": {
     "dev": "node --watch server.js",
-    "start": "nodemon server.js"
+    "start": "node server.js",
+    "build": "prisma generate",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
@@ -28,11 +30,11 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.23.1",
+    "prisma": "^7.10.1",
     "socket.io": "^4.8.4",
     "uuid": "^14.0.3"
   },
   "devDependencies": {
-    "prisma": "^7.10.1",
     "socket.io-client": "^4.8.4"
   }
 }

@@ -214,7 +214,7 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
         </div>
         <h3 className="text-lg font-bold mb-1">Failed to Connect</h3>
         <p className="text-sm text-[#b5bac1] max-w-sm mb-4">
-          {error || 'Could not establish connection to the LiveKit media server.'}
+          {error || 'Could not establish connection to the voice & video media server.'}
         </p>
         <button
           onClick={handleDisconnect}

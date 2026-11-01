@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ||
   import.meta.env.VITE_API_URL ||
-  'http://localhost:5000';
+  undefined; // undefined connects to window.location.origin (proxied by Vite)
 
 // Singleton Socket.IO instance configured with credentials (cookies)
 export const socket = io(SOCKET_URL, {

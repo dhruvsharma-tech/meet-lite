@@ -37,7 +37,7 @@ export default function MessageInput({ channelName, onSendMessage, onTyping }) {
 
   return (
     <div className="px-4 pb-4">
-      <div className="bg-[#383a40] rounded-lg px-4 py-2.5 flex items-center gap-3 shadow-inner">
+      <div className="bg-[#141628]/90 border border-white/10 focus-within:border-[#5865f2]/60 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-lg backdrop-blur-sm transition-all duration-200">
         <textarea
           ref={textareaRef}
           value={content}

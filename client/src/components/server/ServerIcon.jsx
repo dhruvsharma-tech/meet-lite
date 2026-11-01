@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function ServerIcon({ id, name, icon, isActive, onClick }) {
+export default function ServerIcon({ name, icon, isActive, onClick }) {
   const [isHovered, setIsHovered] = useState(false);
 
   // Generate initials fallback if no icon image

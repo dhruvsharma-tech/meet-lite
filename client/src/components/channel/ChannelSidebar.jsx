@@ -6,7 +6,6 @@ import {
   LogOut,
   Trash2,
   UserPlus,
-  Link,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServerStore } from '../../store/serverStore';
@@ -14,7 +13,6 @@ import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import serverService from '../../services/serverService';
 import channelService from '../../services/channelService';
-import api from '../../services/api';
 import ChannelItem from './ChannelItem';
 import ConfirmModal from '../common/ConfirmModal';
 
@@ -137,12 +135,12 @@ export default function ChannelSidebar() {
   if (!currentServer) return null;
 
   return (
-    <aside className="w-[240px] h-full bg-[#2b2d31] flex flex-col select-none shrink-0 border-r border-[#1f2023]/40 relative">
+    <aside className="w-[240px] h-full bg-[#0e101d] flex flex-col select-none shrink-0 border-r border-white/5 relative">
       {/* Server Header Dropdown */}
       <div className="relative">
         <header
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between font-semibold text-white shadow-sm hover:bg-[#35373c]/50 cursor-pointer transition-colors"
+          className="h-12 border-b border-white/5 px-4 flex items-center justify-between font-semibold text-white shadow-xs hover:bg-white/5 cursor-pointer transition-colors"
         >
           <span className="truncate">{currentServer.name}</span>
           <ChevronDown
@@ -273,11 +271,11 @@ export default function ChannelSidebar() {
       </div>
 
       {/* User Footer Bar */}
-      <div className="h-14 bg-[#232428] px-2 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2 overflow-hidden px-1 py-1 rounded hover:bg-[#35373c]/50 cursor-pointer">
+      <div className="h-14 bg-[#0a0b14] border-t border-white/5 px-2 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 overflow-hidden px-1 py-1 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
           <div className="relative w-8 h-8 rounded-full bg-[#5865f2] flex items-center justify-center font-bold text-xs text-white shrink-0">
             {user?.name?.[0]?.toUpperCase() || 'U'}
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#23a55a] border-2 border-[#232428]" />
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#23a55a] border-2 border-[#0a0b14]" />
           </div>
           <div className="truncate text-left">
             <div className="text-xs font-semibold text-white leading-tight truncate">

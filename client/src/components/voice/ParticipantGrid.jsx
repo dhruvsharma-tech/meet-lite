@@ -56,8 +56,8 @@ export default function ParticipantGrid() {
       }
 
       // 3. Camera ON priority
-      const aHasVideo = Boolean(a.publication?.track && !a.publication?.isMuted && a.participant?.isCameraEnabled) ? 1 : 0;
-      const bHasVideo = Boolean(b.publication?.track && !b.publication?.isMuted && b.participant?.isCameraEnabled) ? 1 : 0;
+      const aHasVideo = (a.publication?.track && !a.publication?.isMuted && a.participant?.isCameraEnabled) ? 1 : 0;
+      const bHasVideo = (b.publication?.track && !b.publication?.isMuted && b.participant?.isCameraEnabled) ? 1 : 0;
       if (aHasVideo !== bHasVideo) {
         return bHasVideo - aHasVideo;
       }
