@@ -6,7 +6,7 @@ import {
   LogOut,
   Trash2,
   UserPlus,
-  X,
+  PanelLeft,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServerStore } from '../../store/serverStore';
@@ -30,7 +30,8 @@ export default function ChannelSidebar() {
 
   const setCreateChannelOpen = useUIStore((state) => state.setCreateChannelOpen);
   const setInviteModalOpen = useUIStore((state) => state.setInviteModalOpen);
-  const setMobileNavOpen = useUIStore((state) => state.setMobileNavOpen);
+  const toggleChannelSidebar = useUIStore((state) => state.toggleChannelSidebar);
+  const setChannelSidebarOpen = useUIStore((state) => state.setChannelSidebarOpen);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({
@@ -131,7 +132,10 @@ export default function ChannelSidebar() {
 
   const handleSelectChannel = (chId) => {
     navigate(`/app/${serverId}/${chId}`);
-    setMobileNavOpen(false);
+    // Auto-collapse channels sidebar on mobile devices
+    if (window.innerWidth < 768) {
+      setChannelSidebarOpen(false);
+    }
   };
 
   if (!currentServer) return null;
@@ -142,10 +146,10 @@ export default function ChannelSidebar() {
       <div className="relative">
         <header
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="h-12 border-b border-white/5 px-4 flex items-center justify-between font-semibold text-white shadow-xs hover:bg-white/5 cursor-pointer transition-colors"
+          className="h-12 border-b border-white/5 px-3 sm:px-4 flex items-center justify-between font-semibold text-white shadow-xs hover:bg-white/5 cursor-pointer transition-colors"
         >
           <div className="flex items-center gap-1.5 truncate">
-            <span className="truncate">{currentServer.name}</span>
+            <span className="truncate text-sm">{currentServer.name}</span>
             <ChevronDown
               className={`w-4 h-4 text-[#b5bac1] shrink-0 transition-transform duration-200 ${
                 isDropdownOpen ? 'rotate-180' : ''
@@ -153,16 +157,16 @@ export default function ChannelSidebar() {
             />
           </div>
 
-          {/* Close button on mobile */}
+          {/* Claude-style Collapse Button [| ] */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setMobileNavOpen(false);
+              toggleChannelSidebar();
             }}
-            className="md:hidden p-1 rounded-lg text-[#949ba4] hover:text-white hover:bg-white/10 shrink-0 ml-1"
-            title="Close Channels"
+            className="p-1.5 rounded-lg text-[#949ba4] hover:text-white hover:bg-white/10 shrink-0 transition-colors cursor-pointer"
+            title="Collapse channels sidebar"
           >
-            <X className="w-5 h-5" />
+            <PanelLeft className="w-4 h-4" />
           </button>
         </header>
 

@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Volume2, Users, AlertCircle, RefreshCw, Menu } from 'lucide-react';
+import { Volume2, Users, AlertCircle, RefreshCw, PanelLeft } from 'lucide-react';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -28,7 +28,8 @@ function VoiceRoomInner({ channelName, onDisconnect }) {
   const user = useAuthStore((state) => state.user);
   const isChatOpen = useVoiceStore((state) => state.isChatOpen);
   const addVoiceMessage = useVoiceStore((state) => state.addVoiceMessage);
-  const toggleMobileNav = useUIStore((state) => state.toggleMobileNav);
+  const toggleChannelSidebar = useUIStore((state) => state.toggleChannelSidebar);
+  const isChannelSidebarOpen = useUIStore((state) => state.isChannelSidebarOpen);
   const participants = useParticipants();
   const connectionState = useConnectionState();
 
@@ -106,14 +107,7 @@ function VoiceRoomInner({ channelName, onDisconnect }) {
       {/* Voice Header */}
       <header className="h-12 border-b border-[#1f2023] px-3 sm:px-4 flex items-center justify-between shrink-0 shadow-xs bg-[#2b2d31] z-10 select-none">
         <div className="flex items-center gap-2 text-white font-semibold text-sm min-w-0">
-          {/* Mobile Menu Toggle Button */}
-          <button
-            onClick={toggleMobileNav}
-            className="md:hidden p-1.5 -ml-1 rounded-lg text-[#b5bac1] hover:text-white hover:bg-white/10 shrink-0"
-            title="Open Channels & Servers"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          {/* Sidebar Toggle Button - visible on ALL screen sizes */}<button onClick={toggleChannelSidebar} className={`p-1.5 -ml-1 rounded-lg transition-colors shrink-0 cursor-pointer ${isChannelSidebarOpen ? "text-white bg-white/10" : "text-[#b5bac1] hover:text-white hover:bg-white/10"}`} title={isChannelSidebarOpen ? "Collapse Channels" : "Open Channels"}><PanelLeft className="w-5 h-5" /></button>
           <Volume2 className="w-5 h-5 text-[#23a55a] shrink-0" />
           <span className="truncate">{channelName}</span>
           <span className="text-xs text-[#80848e] font-normal ml-2 hidden sm:inline">
@@ -236,3 +230,4 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
     </LiveKitRoom>
   );
 }
+

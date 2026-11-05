@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MessageSquare, Plus, Compass, Link as LinkIcon, Menu } from 'lucide-react';
+import { MessageSquare, Plus, Compass, Link as LinkIcon, PanelLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServerStore } from '../store/serverStore';
 import { useUIStore } from '../store/uiStore';
@@ -23,8 +23,9 @@ export default function AppPage() {
   const channels = useServerStore((state) => state.channels);
 
   const openCreateServer = useUIStore((state) => state.openCreateServer);
-  const isMobileNavOpen = useUIStore((state) => state.isMobileNavOpen);
-  const setMobileNavOpen = useUIStore((state) => state.setMobileNavOpen);
+  const isChannelSidebarOpen = useUIStore((state) => state.isChannelSidebarOpen);
+  const setChannelSidebarOpen = useUIStore((state) => state.setChannelSidebarOpen);
+  const toggleChannelSidebar = useUIStore((state) => state.toggleChannelSidebar);
 
   // 1. Load user servers on mount
   useEffect(() => {
@@ -70,39 +71,44 @@ export default function AppPage() {
 
   return (
     <div className="flex h-screen w-full bg-[#090a14] text-[#f2f3f5] overflow-hidden select-none font-sans relative">
-      {/* Mobile Drawer Backdrop Overlay */}
-      {isMobileNavOpen && (
+      {/* Mobile Backdrop — shown when channel sidebar is open on mobile */}
+      {isChannelSidebarOpen && serverId && (
         <div
-          className="fixed inset-0 bg-black/70 z-40 backdrop-blur-xs md:hidden transition-opacity"
-          onClick={() => setMobileNavOpen(false)}
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setChannelSidebarOpen(false)}
         />
       )}
 
-      {/* Navigation Sidebars: Static on desktop (md+), Off-canvas Sliding Drawer on mobile */}
-      <div
-        className={`fixed inset-y-0 left-0 z-50 flex h-full transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
-          isMobileNavOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
-        }`}
-      >
-        {/* Panel 1: Server List (72px) */}
+      {/* Panel 1: Server List — ALWAYS visible (permanent, 72px) */}
+      <div className="relative z-50">
         <ServerList />
-
-        {/* Panel 2: Channel Sidebar (240px, visible if server selected) */}
-        {serverId && <ChannelSidebar />}
       </div>
 
+      {/* Panel 2: Channel Sidebar — toggle on/off */}
+      {serverId && (
+        <div
+          className={`fixed inset-y-0 z-50 transition-transform duration-300 ease-in-out md:static md:z-auto md:transition-none ${
+            isChannelSidebarOpen
+              ? 'translate-x-[72px] md:translate-x-0'
+              : '-translate-x-full md:-translate-x-full md:w-0'
+          }`}
+        >
+          <ChannelSidebar />
+        </div>
+      )}
+
       {/* Panel 3: Main Content Viewport */}
-      <main className="flex-1 flex flex-col bg-[#0c0e1a] overflow-hidden relative app-cosmic-bg w-full">
+      <main className="flex-1 flex flex-col bg-[#0c0e1a] overflow-hidden relative app-cosmic-bg w-full min-w-0">
         {/* State A: No Server Selected */}
         {!serverId ? (
           <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-y-auto app-cosmic-bg relative z-10">
-            {/* Mobile Open Drawer Button */}
-            <div className="absolute top-3 left-3 md:hidden">
+            {/* Sidebar Toggle Button — always top-left */}
+            <div className="absolute top-3 left-3">
               <button
-                onClick={() => setMobileNavOpen(true)}
+                onClick={toggleChannelSidebar}
                 className="px-3 py-1.5 rounded-xl bg-[#15172b] border border-white/10 text-white hover:bg-white/10 flex items-center gap-2 text-xs font-semibold shadow-md cursor-pointer"
               >
-                <Menu className="w-4 h-4 text-[#5865f2]" />
+                <PanelLeft className="w-4 h-4 text-[#5865f2]" />
                 <span>Servers</span>
               </button>
             </div>
@@ -176,12 +182,12 @@ export default function AppPage() {
         ) : !activeChannel ? (
           /* State B: Server Selected but No Channel Selected */
           <div className="flex-1 flex flex-col items-center justify-center p-6 text-center app-cosmic-bg relative">
-            <div className="absolute top-3 left-3 md:hidden">
+            <div className="absolute top-3 left-3">
               <button
-                onClick={() => setMobileNavOpen(true)}
+                onClick={toggleChannelSidebar}
                 className="px-3 py-1.5 rounded-xl bg-[#15172b] border border-white/10 text-white hover:bg-white/10 flex items-center gap-2 text-xs font-semibold shadow-md cursor-pointer"
               >
-                <Menu className="w-4 h-4 text-[#5865f2]" />
+                <PanelLeft className="w-4 h-4 text-[#5865f2]" />
                 <span>Channels</span>
               </button>
             </div>
@@ -221,3 +227,4 @@ export default function AppPage() {
     </div>
   );
 }
+

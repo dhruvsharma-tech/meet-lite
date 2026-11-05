@@ -7,7 +7,7 @@ export const useUIStore = create((set) => ({
   isServerSettingsOpen: false,
   isMemberListOpen: true,
   isInviteModalOpen: false,
-  isMobileNavOpen: false, // Mobile sliding drawer for servers + channels
+  isChannelSidebarOpen: true, // Claude-style sidebar toggle for text/voice channels
 
   openCreateServer: (mode = 'CREATE') => set({ isCreateServerOpen: true, createServerMode: mode }),
   setCreateServerOpen: (open) => set((state) => ({ isCreateServerOpen: open, createServerMode: open ? state.createServerMode : 'CREATE' })),
@@ -15,8 +15,8 @@ export const useUIStore = create((set) => ({
   setServerSettingsOpen: (open) => set({ isServerSettingsOpen: open }),
   setInviteModalOpen: (open) => set({ isInviteModalOpen: open }),
   toggleMemberList: () => set((state) => ({ isMemberListOpen: !state.isMemberListOpen })),
-  setMobileNavOpen: (open) => set({ isMobileNavOpen: open }),
-  toggleMobileNav: () => set((state) => ({ isMobileNavOpen: !state.isMobileNavOpen })),
+  toggleChannelSidebar: () => set((state) => ({ isChannelSidebarOpen: !state.isChannelSidebarOpen })),
+  setChannelSidebarOpen: (open) => set({ isChannelSidebarOpen: open }),
 }));
 
 export default useUIStore;
