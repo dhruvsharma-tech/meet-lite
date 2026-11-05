@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Server, Link as LinkIcon, Hash, Image } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useUIStore } from '../../store/uiStore';
 import { useServerStore } from '../../store/serverStore';
@@ -14,7 +14,7 @@ export default function CreateServerModal() {
   const createServerMode = useUIStore((state) => state.createServerMode);
   const addServer = useServerStore((state) => state.addServer);
 
-  const [mode, setMode] = useState(createServerMode || 'CREATE'); // 'CREATE' | 'JOIN'
+  const [mode, setMode] = useState(createServerMode || 'CREATE');
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
   const [inviteInput, setInviteInput] = useState('');
@@ -31,29 +31,18 @@ export default function CreateServerModal() {
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-
     setIsLoading(true);
     try {
-      const data = await serverService.createServer({
-        name: name.trim(),
-        icon: icon.trim() || undefined,
-      });
-
+      const data = await serverService.createServer({ name: name.trim(), icon: icon.trim() || undefined });
       addServer(data.server);
       toast.success(`Server "${data.server.name}" created!`);
       setOpen(false);
       setName('');
       setIcon('');
-
       const defaultChannel = data.server.channels?.[0]?.id;
-      if (defaultChannel) {
-        navigate(`/app/${data.server.id}/${defaultChannel}`);
-      } else {
-        navigate(`/app/${data.server.id}`);
-      }
+      navigate(defaultChannel ? `/app/${data.server.id}/${defaultChannel}` : `/app/${data.server.id}`);
     } catch (err) {
-      const msg = err.response?.data?.error || 'Failed to create server.';
-      toast.error(msg);
+      toast.error(err.response?.data?.error || 'Failed to create server.');
     } finally {
       setIsLoading(false);
     }
@@ -62,20 +51,10 @@ export default function CreateServerModal() {
   const handleJoinSubmit = async (e) => {
     e.preventDefault();
     if (!inviteInput.trim()) return;
-
-    // Extract code if user pasted a full URL (e.g. http://localhost:5173/invite/xyz)
     let code = inviteInput.trim();
-    if (code.includes('/invite/')) {
-      code = code.split('/invite/')[1].split('/')[0].split('?')[0];
-    } else if (code.includes('/')) {
-      code = code.split('/').pop().split('?')[0];
-    }
-
-    if (!code) {
-      toast.error('Invalid invite link or code.');
-      return;
-    }
-
+    if (code.includes('/invite/')) code = code.split('/invite/')[1].split('/')[0].split('?')[0];
+    else if (code.includes('/')) code = code.split('/').pop().split('?')[0];
+    if (!code) { toast.error('Invalid invite link or code.'); return; }
     setIsLoading(true);
     try {
       const res = await api.post(`/api/invites/${code}/join`);
@@ -85,54 +64,55 @@ export default function CreateServerModal() {
       setOpen(false);
       setInviteInput('');
       setMode('CREATE');
-
       const defaultChannel = server.channels?.[0]?.id;
-      if (defaultChannel) {
-        navigate(`/app/${server.id}/${defaultChannel}`);
-      } else {
-        navigate(`/app/${server.id}`);
-      }
+      navigate(defaultChannel ? `/app/${server.id}/${defaultChannel}` : `/app/${server.id}`);
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to join server with this invite.';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || err.response?.data?.error || 'Failed to join server.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm select-none">
-      <div className="w-full max-w-md bg-[#313338] text-[#f2f3f5] rounded-xl shadow-2xl overflow-hidden animate-fade-in border border-[#1e1f22]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md select-none">
+      <div className="w-full max-w-md relative bg-[#111221]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_30px_80px_-10px_rgba(0,0,0,0.9),0_0_40px_rgba(124,58,237,0.15)] overflow-hidden">
+
+        {/* Purple glow top accent */}
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[#7c3aed] to-transparent" />
+
+        {/* Close Button */}
+        <button
+          onClick={() => { setOpen(false); setMode('CREATE'); }}
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer z-10"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         {/* Header */}
-        <div className="p-6 pb-3 text-center relative">
-          <button
-            onClick={() => {
-              setOpen(false);
-              setMode('CREATE');
-            }}
-            className="absolute top-4 right-4 text-[#80848e] hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <h2 className="text-2xl font-bold text-white mb-1">
-            {mode === 'CREATE' ? 'Customize your server' : 'Join a Server'}
+        <div className="pt-8 pb-4 px-7 text-center">
+          {/* Icon badge */}
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#5865f2] shadow-[0_0_24px_rgba(124,58,237,0.5)] mb-4">
+            <Server className="w-5 h-5 text-white" />
+          </div>
+          <h2 className="text-2xl font-black tracking-tight text-white mb-1">
+            {mode === 'CREATE' ? 'Create a Server' : 'Join a Server'}
           </h2>
-          <p className="text-xs text-[#b5bac1]">
+          <p className="text-sm text-zinc-400">
             {mode === 'CREATE'
-              ? 'Give your new server a personality with a name and icon.'
-              : 'Enter an invite link or 8-character code from a friend.'}
+              ? 'Give your new server a name and optional icon.'
+              : 'Enter an invite link or 8-character code.'}
           </p>
         </div>
 
         {/* Mode Switcher Tabs */}
-        <div className="flex bg-[#1e1f22] p-1 mx-6 rounded-lg mb-4 text-xs font-semibold">
+        <div className="mx-7 mb-6 flex gap-1 p-1 bg-white/5 rounded-xl border border-white/8">
           <button
             type="button"
             onClick={() => setMode('CREATE')}
-            className={`flex-1 py-1.5 rounded-md transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               mode === 'CREATE'
-                ? 'bg-[#5865f2] text-white shadow-sm'
-                : 'text-[#949ba4] hover:text-white'
+                ? 'bg-gradient-to-r from-[#7c3aed] to-[#5865f2] text-white shadow-md'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             Create Server
@@ -140,74 +120,83 @@ export default function CreateServerModal() {
           <button
             type="button"
             onClick={() => setMode('JOIN')}
-            className={`flex-1 py-1.5 rounded-md transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               mode === 'JOIN'
-                ? 'bg-[#23a55a] text-white shadow-sm'
-                : 'text-[#949ba4] hover:text-white'
+                ? 'bg-gradient-to-r from-[#23a55a] to-[#1f9250] text-white shadow-md'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             Join with Invite
           </button>
         </div>
 
-        {/* Mode: CREATE */}
+        {/* ── CREATE MODE ── */}
         {mode === 'CREATE' ? (
           <form onSubmit={handleCreateSubmit}>
-            <div className="px-6 space-y-4">
+            <div className="px-7 space-y-4">
+              {/* Server Name */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#b5bac1] mb-2">
-                  Server Name <span className="text-[#f23f42]">*</span>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Server Name <span className="text-rose-400">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="My awesome server"
-                  required
-                  minLength={2}
-                  maxLength={100}
-                  className="w-full px-3 py-2.5 bg-[#1e1f22] border border-[#1e1f22] rounded text-sm text-white placeholder-[#80848e] focus:outline-none focus:ring-2 focus:ring-[#5865f2] transition-colors"
-                />
+                <div className="relative flex items-center">
+                  <Hash className="absolute left-3.5 w-4 h-4 text-zinc-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="My awesome server"
+                    required
+                    minLength={2}
+                    maxLength={100}
+                    className="w-full pl-10 pr-4 py-3 bg-[#151728] border border-white/10 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#7c3aed] focus:ring-1 focus:ring-[#7c3aed] transition-all"
+                  />
+                </div>
               </div>
 
+              {/* Server Icon */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#b5bac1] mb-2">
-                  Server Icon URL (Optional)
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Server Icon URL <span className="text-zinc-500 normal-case font-normal">(optional)</span>
                 </label>
-                <input
-                  type="url"
-                  value={icon}
-                  onChange={(e) => setIcon(e.target.value)}
-                  placeholder="https://example.com/icon.png"
-                  className="w-full px-3 py-2.5 bg-[#1e1f22] border border-[#1e1f22] rounded text-sm text-white placeholder-[#80848e] focus:outline-none focus:ring-2 focus:ring-[#5865f2] transition-colors"
-                />
+                <div className="relative flex items-center">
+                  <Image className="absolute left-3.5 w-4 h-4 text-zinc-500 pointer-events-none" />
+                  <input
+                    type="url"
+                    value={icon}
+                    onChange={(e) => setIcon(e.target.value)}
+                    placeholder="https://example.com/icon.png"
+                    className="w-full pl-10 pr-4 py-3 bg-[#151728] border border-white/10 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#7c3aed] focus:ring-1 focus:ring-[#7c3aed] transition-all"
+                  />
+                </div>
               </div>
 
-              <div className="pt-2 text-xs text-[#b5bac1]">
+              {/* Switch hint */}
+              <p className="text-xs text-zinc-500">
                 Have an invite already?{' '}
                 <button
                   type="button"
                   onClick={() => setMode('JOIN')}
-                  className="text-[#00a8fc] hover:underline font-semibold cursor-pointer"
+                  className="text-[#a78bfa] hover:text-white font-semibold hover:underline cursor-pointer transition-colors"
                 >
                   Join a Server
                 </button>
-              </div>
+              </p>
             </div>
 
             {/* Footer */}
-            <div className="mt-6 bg-[#2b2d31] px-6 py-4 flex items-center justify-between">
+            <div className="mt-6 px-7 pb-7 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-sm font-medium text-white hover:underline cursor-pointer"
+                className="px-5 py-2.5 text-sm font-semibold text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isLoading || !name.trim()}
-                className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] disabled:opacity-50 text-white text-sm font-medium rounded transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#7c3aed] to-[#5865f2] hover:from-[#6d28d9] hover:to-[#4752c4] disabled:opacity-40 active:scale-[0.98] text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-[0_4px_15px_rgba(124,58,237,0.4)]"
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Create Server
@@ -215,41 +204,44 @@ export default function CreateServerModal() {
             </div>
           </form>
         ) : (
-          /* Mode: JOIN */
+          /* ── JOIN MODE ── */
           <form onSubmit={handleJoinSubmit}>
-            <div className="px-6 space-y-4">
+            <div className="px-7 space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#b5bac1] mb-2">
-                  Invite Link or Code <span className="text-[#f23f42]">*</span>
+                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Invite Link or Code <span className="text-rose-400">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={inviteInput}
-                  onChange={(e) => setInviteInput(e.target.value)}
-                  placeholder="http://localhost:5173/invite/abc12345 or abc12345"
-                  required
-                  className="w-full px-3 py-2.5 bg-[#1e1f22] border border-[#1e1f22] rounded text-sm text-white placeholder-[#80848e] focus:outline-none focus:ring-2 focus:ring-[#5865f2] transition-colors"
-                />
-              </div>
-
-              <div className="text-[11px] text-[#80848e] leading-relaxed">
-                Invites should look like <span className="text-[#dbdee1]">http://localhost:5173/invite/code</span> or just the <span className="text-[#dbdee1]">8-character code</span>.
+                <div className="relative flex items-center">
+                  <LinkIcon className="absolute left-3.5 w-4 h-4 text-zinc-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={inviteInput}
+                    onChange={(e) => setInviteInput(e.target.value)}
+                    placeholder="https://meet-lite.app/invite/abc12345"
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-[#151728] border border-white/10 rounded-xl text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#23a55a] focus:ring-1 focus:ring-[#23a55a] transition-all"
+                  />
+                </div>
+                <p className="mt-2 text-[11px] text-zinc-500 leading-relaxed">
+                  Paste a full invite URL or just the{' '}
+                  <span className="text-zinc-300">8-character code</span> from a friend.
+                </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="mt-6 bg-[#2b2d31] px-6 py-4 flex items-center justify-between">
+            <div className="mt-6 px-7 pb-7 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setMode('CREATE')}
-                className="text-sm font-medium text-white hover:underline cursor-pointer"
+                className="px-5 py-2.5 text-sm font-semibold text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all cursor-pointer"
               >
                 Back
               </button>
               <button
                 type="submit"
                 disabled={isLoading || !inviteInput.trim()}
-                className="px-6 py-2.5 bg-[#5865f2] hover:bg-[#4752c4] disabled:opacity-50 text-white text-sm font-medium rounded transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                className="px-6 py-2.5 bg-gradient-to-r from-[#23a55a] to-[#1f9250] hover:from-[#1f9250] hover:to-[#166534] disabled:opacity-40 active:scale-[0.98] text-white text-sm font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer shadow-[0_4px_15px_rgba(35,165,90,0.4)]"
               >
                 {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Join Server
