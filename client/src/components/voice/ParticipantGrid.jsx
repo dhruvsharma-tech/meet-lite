@@ -1,36 +1,46 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useTracks, useSpeakingParticipants } from '@livekit/components-react';
 import { Track } from 'livekit-client';
-import { useTracks, useParticipants, useSpeakingParticipants } from '@livekit/components-react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import VideoTile from './VideoTile';
 
-// Maximum video tiles rendered in DOM simultaneously (prevents GPU/CPU decoding overload in 10-20 user rooms)
+// Maximum participants shown per page
 const MAX_TILES_PER_PAGE = 8;
 
 export default function ParticipantGrid() {
-  const participants = useParticipants();
-  const speakingParticipants = useSpeakingParticipants();
-  const cameraTracks = useTracks([
+  const [currentPage, setCurrentPage] = useState(0);
+
+  // Track both Camera and Placeholder tracks
+  const allTracks = useTracks([
     { source: Track.Source.Camera, withPlaceholder: true },
   ]);
 
-  const [currentPage, setCurrentPage] = useState(0);
+  // Keep a map of when participants last spoke for speaking recency priority
+  const speakingParticipants = useSpeakingParticipants();
   const lastSpokeRef = useRef(new Map());
 
-  // Track timestamps of when participants were last heard speaking
   useEffect(() => {
     const now = Date.now();
-    for (const speaker of speakingParticipants) {
-      if (speaker?.identity) {
-        lastSpokeRef.current.set(speaker.identity, now);
-      }
-    }
+    speakingParticipants.forEach((p) => {
+      lastSpokeRef.current.set(p.identity, now);
+    });
   }, [speakingParticipants]);
 
-  // Combined tracks or participant references
-  const allItems = cameraTracks.length > 0 ? cameraTracks : participants.map((p) => ({ participant: p }));
+  // Deduplicate tracks by participant identity
+  const allItems = useMemo(() => {
+    const seen = new Set();
+    const unique = [];
+    for (const item of allTracks) {
+      const id = item.participant?.identity || item.publication?.trackSid;
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        unique.push(item);
+      }
+    }
+    return unique;
+  }, [allTracks]);
 
-  // Sort: Active speakers first -> Camera ON next -> Stable by identity
+  // Sort participants by priority:
   const sortedItems = useMemo(() => {
     const now = Date.now();
     const currentlySpeakingSet = new Set(speakingParticipants.map((p) => p.identity));
@@ -79,7 +89,6 @@ export default function ParticipantGrid() {
   }, [currentPage, totalPages]);
 
   // Only the visible page slice is rendered in the DOM
-  // Off-screen participants are NOT rendered, so LiveKit adaptiveStream stops pulling their video
   const visibleItems = useMemo(() => {
     const start = currentPage * MAX_TILES_PER_PAGE;
     return sortedItems.slice(start, start + MAX_TILES_PER_PAGE);
@@ -87,10 +96,10 @@ export default function ParticipantGrid() {
 
   const count = visibleItems.length;
 
-  // Responsive grid layout classes
+  // Responsive grid layout classes: mobile portrait vs landscape vs desktop
   let gridClass = 'grid-cols-1 max-w-2xl'; // 1 user
   if (count === 2) {
-    gridClass = 'grid-cols-1 md:grid-cols-2 max-w-4xl';
+    gridClass = 'grid-cols-1 sm:grid-cols-2 max-w-4xl';
   } else if (count >= 3 && count <= 4) {
     gridClass = 'grid-cols-2 max-w-5xl';
   } else if (count >= 5 && count <= 6) {
@@ -100,15 +109,15 @@ export default function ParticipantGrid() {
   }
 
   return (
-    <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-3 relative overflow-hidden select-none">
+    <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-2 sm:p-3 relative overflow-hidden select-none">
       {/* Active Grid Viewport */}
       <div className="flex-1 w-full h-full flex items-center justify-center overflow-y-auto min-h-0">
-        <div className={`grid ${gridClass} gap-3 w-full h-full max-h-[82vh] justify-center auto-rows-fr`}>
+        <div className={`grid ${gridClass} gap-2 sm:gap-3 w-full h-full max-h-full justify-center auto-rows-fr`}>
           {visibleItems.map((item, idx) => {
             const participant = item.participant;
             const key = participant?.identity || item.publication?.trackSid || idx;
             return (
-              <div key={key} className="w-full h-full min-h-[160px] flex">
+              <div key={key} className="w-full h-full min-h-0 flex items-center justify-center">
                 <VideoTile trackRef={item} participant={participant} />
               </div>
             );
@@ -116,10 +125,10 @@ export default function ParticipantGrid() {
         </div>
       </div>
 
-      {/* Pagination Controls (shown when participants exceed MAX_TILES_PER_PAGE) */}
+      {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="shrink-0 pt-2 pb-1 flex items-center justify-center gap-3 z-10">
-          <div className="flex items-center gap-2 bg-[#1e1f22]/90 backdrop-blur-md border border-[#2b2d31] rounded-full px-4 py-1.5 shadow-lg">
+          <div className="flex items-center gap-2 bg-[#1e1f22]/90 backdrop-blur-md border border-[#2b2d31] rounded-full px-3 py-1 shadow-lg">
             <button
               onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
               disabled={currentPage === 0}
@@ -133,7 +142,6 @@ export default function ParticipantGrid() {
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            {/* Page Dots & Number Indicator */}
             <div className="flex items-center gap-1.5 px-2 text-xs font-semibold text-[#b5bac1]">
               <span>Page {currentPage + 1} of {totalPages}</span>
               <span className="text-[#80848e] ml-1">({totalItems} total)</span>
@@ -141,9 +149,9 @@ export default function ParticipantGrid() {
 
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={currentPage === totalPages - 1}
+              disabled={currentPage >= totalPages - 1}
               className={`p-1 rounded-full transition-colors cursor-pointer ${
-                currentPage === totalPages - 1
+                currentPage >= totalPages - 1
                   ? 'text-[#80848e]/40 cursor-not-allowed'
                   : 'text-white hover:bg-[#35373c]'
               }`}

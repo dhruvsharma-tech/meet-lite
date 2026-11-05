@@ -6,6 +6,7 @@ import {
   LogOut,
   Trash2,
   UserPlus,
+  X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServerStore } from '../../store/serverStore';
@@ -29,6 +30,7 @@ export default function ChannelSidebar() {
 
   const setCreateChannelOpen = useUIStore((state) => state.setCreateChannelOpen);
   const setInviteModalOpen = useUIStore((state) => state.setInviteModalOpen);
+  const setMobileNavOpen = useUIStore((state) => state.setMobileNavOpen);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({
@@ -50,26 +52,21 @@ export default function ChannelSidebar() {
   const textChannels = channels.filter((c) => c.type === 'TEXT');
   const voiceChannels = channels.filter((c) => c.type === 'VOICE');
 
-  const handleDeleteChannel = (id, name) => {
+  const handleDeleteChannel = (cId, cName) => {
     setConfirmConfig({
       isOpen: true,
       title: 'Delete Channel',
-      message: `Are you sure you want to delete #${name || 'this channel'}? All messages and attachments in this channel will be permanently removed.`,
+      message: `Are you sure you want to delete "#${cName}"? All messages in this channel will be permanently removed.`,
       confirmText: 'Delete Channel',
       type: 'danger',
       onConfirm: async () => {
         closeConfirm();
         try {
-          await channelService.deleteChannel(serverId, id);
-          removeChannel(id);
+          await channelService.deleteChannel(serverId, cId);
+          removeChannel(cId);
           toast.success('Channel deleted.');
-          if (channelId === id) {
-            const remaining = channels.find((c) => c.id !== id);
-            if (remaining) {
-              navigate(`/app/${serverId}/${remaining.id}`);
-            } else {
-              navigate(`/app/${serverId}`);
-            }
+          if (channelId === cId) {
+            navigate(`/app/${serverId}`);
           }
         } catch {
           toast.error('Failed to delete channel.');
@@ -132,6 +129,11 @@ export default function ChannelSidebar() {
     setInviteModalOpen(true);
   };
 
+  const handleSelectChannel = (chId) => {
+    navigate(`/app/${serverId}/${chId}`);
+    setMobileNavOpen(false);
+  };
+
   if (!currentServer) return null;
 
   return (
@@ -142,12 +144,26 @@ export default function ChannelSidebar() {
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           className="h-12 border-b border-white/5 px-4 flex items-center justify-between font-semibold text-white shadow-xs hover:bg-white/5 cursor-pointer transition-colors"
         >
-          <span className="truncate">{currentServer.name}</span>
-          <ChevronDown
-            className={`w-4 h-4 text-[#b5bac1] transition-transform duration-200 ${
-              isDropdownOpen ? 'rotate-180' : ''
-            }`}
-          />
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="truncate">{currentServer.name}</span>
+            <ChevronDown
+              className={`w-4 h-4 text-[#b5bac1] shrink-0 transition-transform duration-200 ${
+                isDropdownOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </div>
+
+          {/* Close button on mobile */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMobileNavOpen(false);
+            }}
+            className="md:hidden p-1 rounded-lg text-[#949ba4] hover:text-white hover:bg-white/10 shrink-0 ml-1"
+            title="Close Channels"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </header>
 
         {/* Server Context Menu */}
@@ -232,7 +248,7 @@ export default function ChannelSidebar() {
                 type={c.type}
                 isActive={c.id === channelId}
                 isOwner={isOwner}
-                onClick={() => navigate(`/app/${serverId}/${c.id}`)}
+                onClick={() => handleSelectChannel(c.id)}
                 onDelete={handleDeleteChannel}
               />
             ))}
@@ -262,7 +278,7 @@ export default function ChannelSidebar() {
                 type={c.type}
                 isActive={c.id === channelId}
                 isOwner={isOwner}
-                onClick={() => navigate(`/app/${serverId}/${c.id}`)}
+                onClick={() => handleSelectChannel(c.id)}
                 onDelete={handleDeleteChannel}
               />
             ))}
@@ -270,35 +286,35 @@ export default function ChannelSidebar() {
         </div>
       </div>
 
-      {/* User Footer Bar */}
-      <div className="h-14 bg-[#0a0b14] border-t border-white/5 px-2 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2 overflow-hidden px-1 py-1 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
-          <div className="relative w-8 h-8 rounded-full bg-[#5865f2] flex items-center justify-center font-bold text-xs text-white shrink-0">
-            {user?.name?.[0]?.toUpperCase() || 'U'}
+      {/* Bottom User Profile Section */}
+      <div className="h-14 bg-[#0a0b14] border-t border-white/5 px-2.5 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 overflow-hidden">
+          <div className="relative">
+            {user?.avatar ? (
+              <img src={user.avatar} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[#5865f2] flex items-center justify-center font-bold text-white text-xs">
+                {user?.name?.[0]?.toUpperCase() || 'U'}
+              </div>
+            )}
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#23a55a] border-2 border-[#0a0b14]" />
           </div>
-          <div className="truncate text-left">
-            <div className="text-xs font-semibold text-white leading-tight truncate">
-              {user?.name}
-            </div>
-            <div className="text-[10px] text-[#949ba4] leading-tight truncate">
-              {user?.email}
-            </div>
+          <div className="truncate">
+            <p className="text-xs font-semibold text-white truncate leading-tight">{user?.name}</p>
+            <p className="text-[10px] text-[#949ba4] truncate">Online</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 text-[#b5bac1]">
-          <button
-            onClick={handleLogout}
-            className="p-1.5 rounded hover:bg-[#35373c] hover:text-[#f23f42] transition-colors cursor-pointer"
-            title="Log Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+        <button
+          onClick={handleLogout}
+          className="p-1.5 text-[#949ba4] hover:text-[#f23f42] hover:bg-white/5 rounded transition-colors cursor-pointer"
+          title="Log Out"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Styled Confirmation Modal (No ugly browser alert) */}
+      {/* Confirmation Modal */}
       <ConfirmModal
         isOpen={confirmConfig.isOpen}
         onClose={closeConfirm}
@@ -311,4 +327,3 @@ export default function ChannelSidebar() {
     </aside>
   );
 }
-

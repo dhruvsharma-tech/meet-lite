@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Volume2, Users, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Volume2, Users, AlertCircle, RefreshCw, Menu } from 'lucide-react';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -16,16 +16,19 @@ import toast from 'react-hot-toast';
 import useLiveKit from '../../hooks/useLiveKit';
 import { useVoiceStore } from '../../store/voiceStore';
 import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
 import ParticipantGrid from './ParticipantGrid';
 import ScreenShareView from './ScreenShareView';
 import VoiceControls from './VoiceControls';
 import VoiceChatPanel from './VoiceChatPanel';
+import SpaceLoadingScreen from '../common/SpaceLoadingScreen';
 
 function VoiceRoomInner({ channelName, onDisconnect }) {
   const room = useRoomContext();
   const user = useAuthStore((state) => state.user);
   const isChatOpen = useVoiceStore((state) => state.isChatOpen);
   const addVoiceMessage = useVoiceStore((state) => state.addVoiceMessage);
+  const toggleMobileNav = useUIStore((state) => state.toggleMobileNav);
   const participants = useParticipants();
   const connectionState = useConnectionState();
 
@@ -37,7 +40,7 @@ function VoiceRoomInner({ channelName, onDisconnect }) {
 
   const isReconnecting = connectionState === ConnectionState.Reconnecting;
 
-  // Listen for in-call chat messages over Native LiveKit WebRTC Data Channel (0ms latency, zero server DB load)
+  // Listen for in-call chat messages over Native LiveKit WebRTC Data Channel
   useEffect(() => {
     if (!room) return;
 
@@ -68,29 +71,31 @@ function VoiceRoomInner({ channelName, onDisconnect }) {
   // Send ephemeral chat message via LiveKit reliable WebRTC data channel
   const handleSendVoiceMessage = useCallback(
     async (content) => {
-      if (!room || !content?.trim()) return;
-      const trimmed = content.trim();
+      if (!room || !content.trim()) return;
 
-      const message = {
+      const messagePayload = {
         type: 'chat',
-        id: `${Date.now()}-${room.localParticipant.identity}`,
-        userId: room.localParticipant.identity,
-        name: room.localParticipant.name || user?.name || 'You',
-        content: trimmed,
+        id: `${Date.now()}-${Math.random()}`,
+        userId: user?.id,
+        name: user?.name || 'Me',
+        content: content.trim(),
         createdAt: new Date().toISOString(),
       };
 
       try {
-        const payload = new TextEncoder().encode(JSON.stringify(message));
-        await room.localParticipant.publishData(payload, {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(JSON.stringify(messagePayload));
+
+        await room.localParticipant.publishData(data, {
           reliable: true,
           topic: 'chat',
         });
-        // Optimistic display for sender
-        addVoiceMessage(message);
+
+        // Add to local state immediately
+        addVoiceMessage(messagePayload);
       } catch (err) {
-        console.error('[LiveKit DataChannel] Message send failed:', err);
-        toast.error('Failed to send in-call message');
+        console.error('[LiveKit DataChannel] Send failed:', err);
+        toast.error('Failed to send in-call chat message');
       }
     },
     [room, user, addVoiceMessage]
@@ -99,25 +104,33 @@ function VoiceRoomInner({ channelName, onDisconnect }) {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#111214] overflow-hidden relative">
       {/* Voice Header */}
-      <header className="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between shrink-0 shadow-xs bg-[#2b2d31] z-10 select-none">
-        <div className="flex items-center gap-2 text-white font-semibold text-sm">
-          <Volume2 className="w-5 h-5 text-[#23a55a]" />
-          <span>{channelName}</span>
+      <header className="h-12 border-b border-[#1f2023] px-3 sm:px-4 flex items-center justify-between shrink-0 shadow-xs bg-[#2b2d31] z-10 select-none">
+        <div className="flex items-center gap-2 text-white font-semibold text-sm min-w-0">
+          {/* Mobile Menu Toggle Button */}
+          <button
+            onClick={toggleMobileNav}
+            className="md:hidden p-1.5 -ml-1 rounded-lg text-[#b5bac1] hover:text-white hover:bg-white/10 shrink-0"
+            title="Open Channels & Servers"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <Volume2 className="w-5 h-5 text-[#23a55a] shrink-0" />
+          <span className="truncate">{channelName}</span>
           <span className="text-xs text-[#80848e] font-normal ml-2 hidden sm:inline">
-            Voice & Video Connected
+            Connected
           </span>
           {/* Reconnecting Badge */}
           {isReconnecting && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#fee75c]/20 text-[#fee75c] border border-[#fee75c]/30 animate-pulse ml-2">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#fee75c]/20 text-[#fee75c] border border-[#fee75c]/30 animate-pulse ml-2">
               <RefreshCw className="w-3 h-3 animate-spin" />
               Reconnecting...
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-medium text-[#b5bac1] bg-[#1e1f22] px-2.5 py-1 rounded-md">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-[#b5bac1] bg-[#1e1f22] px-2.5 py-1 rounded-md shrink-0">
           <Users className="w-3.5 h-3.5 text-[#23a55a]" />
-          <span>{participants.length} connected</span>
+          <span>{participants.length}</span>
         </div>
       </header>
 
@@ -148,35 +161,22 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
   const navigate = useNavigate();
   const { token, serverUrl, isLoading, error, disconnect } = useLiveKit(channelId);
 
-  // Scalable LiveKit Room Options for 10-20 users
+  // Scalable LiveKit Room Options
   const roomOptions = useMemo(
     () => ({
-      // 1. AdaptiveStream: only pull resolution needed for tile display size (saves downstream CPU & bandwidth)
       adaptiveStream: true,
-      // 2. Dynacast: pause upstream video when no subscribers are watching (saves upstream CPU & bandwidth)
       dynacast: true,
-      // 3. Audio Processing: Noise suppression, acoustic echo cancellation, and auto gain control
       audioCaptureDefaults: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
       },
-      // 4. Video Presets: default 360p capture to avoid 1080p camera overload in group calls
       videoCaptureDefaults: {
-        resolution: VideoPresets.h360.resolution, // 640x360
+        resolution: VideoPresets.h360.resolution,
       },
-      // 5. Simulcast: publish multi-resolution layers (180p, 360p, 720p)
       publishDefaults: {
         simulcast: true,
-        videoSimulcastLayers: [
-          VideoPresets.h180,
-          VideoPresets.h360,
-          VideoPresets.h720,
-        ],
-        stopMicTrackOnMute: false,
       },
-      disconnectOnPageLeave: true,
-      stopLocalTrackOnUnpublish: true,
     }),
     []
   );
@@ -185,12 +185,9 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
     disconnect();
     if (serverId) {
       navigate(`/app/${serverId}`);
+    } else {
+      navigate('/app');
     }
-  };
-
-  const handleRoomError = (err) => {
-    console.error('[LiveKit Room Error]:', err);
-    toast.error('Voice room error: ' + (err.message || 'Connection lost'));
   };
 
   const handleRoomDisconnected = (reason) => {
@@ -198,27 +195,22 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#313338] text-white">
-        <Loader2 className="w-8 h-8 animate-spin text-[#5865f2] mb-3" />
-        <p className="text-sm text-[#b5bac1]">Connecting to voice channel #{channelName}...</p>
-      </div>
-    );
+    return <SpaceLoadingScreen message={`Connecting to #${channelName}...`} />;
   }
 
   if (error || !token || !serverUrl) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#313338] text-white p-6 text-center">
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#111214] text-white p-6 text-center">
         <div className="w-16 h-16 rounded-2xl bg-[#f23f42]/20 flex items-center justify-center text-[#f23f42] mb-4">
           <AlertCircle className="w-8 h-8" />
         </div>
         <h3 className="text-lg font-bold mb-1">Failed to Connect</h3>
-        <p className="text-sm text-[#b5bac1] max-w-sm mb-4">
-          {error || 'Could not establish connection to the voice & video media server.'}
+        <p className="text-xs text-[#949ba4] max-w-sm mb-4">
+          {error || 'Could not fetch token for this voice channel.'}
         </p>
         <button
           onClick={handleDisconnect}
-          className="px-4 py-2 bg-[#5865f2] hover:bg-[#4752c4] text-white text-xs font-semibold rounded transition-colors cursor-pointer"
+          className="px-4 py-2 bg-[#5865f2] hover:bg-[#4752c4] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
         >
           Return to Server
         </button>
@@ -228,15 +220,14 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
 
   return (
     <LiveKitRoom
+      video={false}
+      audio={false}
       token={token}
       serverUrl={serverUrl}
-      connect={true}
-      video={false}
-      audio={true}
       options={roomOptions}
-      onError={handleRoomError}
-      onDisconnected={handleRoomDisconnected}
+      data-lk-theme="default"
       className="flex-1 flex flex-col h-full overflow-hidden"
+      onDisconnected={handleRoomDisconnected}
     >
       <VoiceRoomInner
         channelName={channelName}
@@ -245,4 +236,3 @@ export default function VoiceRoom({ channelId, channelName, serverId }) {
     </LiveKitRoom>
   );
 }
-

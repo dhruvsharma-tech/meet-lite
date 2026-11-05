@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Crown, X } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { useServerStore } from '../../store/serverStore';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
-import socket from '../../socket';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../common/ConfirmModal';
 
@@ -12,9 +11,9 @@ const EMPTY_MEMBERS = [];
 
 export default function MemberList({ serverId }) {
   const isMemberListOpen = useUIStore((state) => state.isMemberListOpen);
+  const toggleMemberList = useUIStore((state) => state.toggleMemberList);
   const members = useServerStore((state) => state.members) || EMPTY_MEMBERS;
   const setMembers = useServerStore((state) => state.setMembers);
-  const setOnlineUsers = useServerStore((state) => state.setOnlineUsers);
   const currentUser = useAuthStore((state) => state.user);
   const currentMember = members.find((m) => m.user?.id === currentUser?.id);
   const isOwner = currentMember?.role === 'OWNER';
@@ -31,27 +30,9 @@ export default function MemberList({ serverId }) {
     setConfirmConfig((prev) => ({ ...prev, isOpen: false }));
   };
 
-  useEffect(() => {
-    if (!serverId || !isMemberListOpen) return;
-
-    // 1. Fetch members from REST API (includes isOnline from server via onlineUserIds set)
-    api.get(`/api/servers/${serverId}/members`).then((res) => {
-      setMembers(res.data.members);
-    }).catch(() => {});
-
-    // 2. Also ask socket for real-time presence snapshot to stay in sync
-    if (socket.connected) {
-      socket.emit('presence:get', { serverId }, (data) => {
-        if (data?.onlineUserIds) {
-          setOnlineUsers(data.onlineUserIds);
-        }
-      });
-    }
-  }, [serverId, isMemberListOpen, setMembers, setOnlineUsers]);
-
   if (!isMemberListOpen) return null;
 
-  // Split by status field (set by server REST or by presence:update socket events)
+  // Split by status field
   const online = members.filter((m) => m.status === 'online' || m.user?.isOnline === true);
   const offline = members.filter((m) => m.status !== 'online' && m.user?.isOnline !== true);
 
@@ -67,16 +48,16 @@ export default function MemberList({ serverId }) {
           await api.delete(`/api/servers/${serverId}/members/${memberId}`);
           setMembers(members.filter((m) => m.id !== memberId));
           toast.success(`${memberName} kicked`);
-        } catch (err) {
-          toast.error(err.response?.data?.message || 'Failed to kick member');
+        } catch {
+          toast.error('Failed to kick member');
         }
       },
     });
   }
 
   function MemberRow({ member }) {
-    const isCurrentUser = member.user?.id === currentUser?.id;
-    const canKick = isOwner && !isCurrentUser && member.role !== 'OWNER';
+    const isSelf = member.user?.id === currentUser?.id;
+    const canKick = isOwner && !isSelf && member.role !== 'OWNER';
 
     return (
       <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 group cursor-default select-none transition-colors">
@@ -107,7 +88,7 @@ export default function MemberList({ serverId }) {
           </div>
         </div>
 
-        {/* Kick button — only visible on hover for owners */}
+        {/* Kick button */}
         {canKick && (
           <button
             onClick={() => promptKick(member.id, member.user?.name)}
@@ -122,44 +103,63 @@ export default function MemberList({ serverId }) {
   }
 
   return (
-    <div className="w-60 shrink-0 bg-[#0c0d18] flex flex-col overflow-hidden border-l border-white/5">
-      <div className="px-3 pt-4 pb-2 flex-1 overflow-y-auto">
-        {/* ONLINE */}
-        {online.length > 0 && (
-          <div className="mb-3">
-            <p className="text-xs font-semibold text-[#80848e] uppercase tracking-wide px-2 mb-1">
-              Online — {online.length}
-            </p>
-            {online.map((m) => <MemberRow key={m.id} member={m} />)}
-          </div>
-        )}
-
-        {/* OFFLINE */}
-        {offline.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-[#80848e] uppercase tracking-wide px-2 mb-1">
-              Offline — {offline.length}
-            </p>
-            {offline.map((m) => <MemberRow key={m.id} member={m} />)}
-          </div>
-        )}
-
-        {members.length === 0 && (
-          <p className="text-xs text-[#80848e] px-2 mt-2">No members found</p>
-        )}
-      </div>
-
-      {/* Styled Kick Confirmation Modal */}
-      <ConfirmModal
-        isOpen={confirmConfig.isOpen}
-        onClose={closeConfirm}
-        onConfirm={confirmConfig.onConfirm}
-        title={confirmConfig.title}
-        message={confirmConfig.message}
-        confirmText={confirmConfig.confirmText}
-        type="danger"
+    <>
+      {/* Mobile Backdrop Overlay */}
+      <div
+        className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-xs"
+        onClick={toggleMemberList}
       />
-    </div>
+
+      {/* Member List Container: static on lg screens, fixed off-canvas sheet on mobile */}
+      <div className="fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] bg-[#0c0d18] shadow-2xl flex flex-col overflow-hidden border-l border-white/10 lg:static lg:w-60 lg:z-auto lg:shadow-none lg:border-white/5 shrink-0">
+        {/* Mobile Header with Close button */}
+        <div className="h-12 border-b border-white/5 px-4 flex items-center justify-between font-semibold text-white text-sm shrink-0 lg:hidden">
+          <span>Members ({members.length})</span>
+          <button
+            onClick={toggleMemberList}
+            className="p-1.5 rounded-lg text-[#949ba4] hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="px-3 pt-4 pb-2 flex-1 overflow-y-auto">
+          {/* ONLINE */}
+          {online.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-[#80848e] uppercase tracking-wide px-2 mb-1">
+                Online — {online.length}
+              </p>
+              {online.map((m) => <MemberRow key={m.id} member={m} />)}
+            </div>
+          )}
+
+          {/* OFFLINE */}
+          {offline.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-[#80848e] uppercase tracking-wide px-2 mb-1">
+                Offline — {offline.length}
+              </p>
+              {offline.map((m) => <MemberRow key={m.id} member={m} />)}
+            </div>
+          )}
+
+          {members.length === 0 && (
+            <p className="text-xs text-[#80848e] px-2 mt-2">No members found</p>
+          )}
+        </div>
+
+        {/* Styled Kick Confirmation Modal */}
+        <ConfirmModal
+          isOpen={confirmConfig.isOpen}
+          onClose={closeConfirm}
+          onConfirm={confirmConfig.onConfirm}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          confirmText={confirmConfig.confirmText}
+          type="danger"
+        />
+      </div>
+    </>
   );
 }
-

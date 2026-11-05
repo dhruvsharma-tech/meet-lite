@@ -49,11 +49,11 @@ export default function VoiceControls({ onDisconnect }) {
         msg.includes('Device in use') ||
         msg.includes('TrackStartError')
       ) {
-        toast.error('Camera busy! Your webcam is already in use by another tab or browser on this computer. Turn off camera in Tab 1 or Tab 2 first.', {
+        toast.error('Camera busy! Your webcam is already in use by another tab or browser.', {
           duration: 5000,
         });
       } else if (msg.includes('NotAllowedError') || msg.includes('Permission denied')) {
-        toast.error('Camera permission blocked. Please allow camera in your browser address bar.');
+        toast.error('Camera permission blocked. Please allow camera in browser address bar.');
       } else {
         toast.error('Camera error: ' + (err.message || 'Could not start camera'));
       }
@@ -67,21 +67,21 @@ export default function VoiceControls({ onDisconnect }) {
     try {
       await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
     } catch (err) {
-      console.warn('Screen sharing cancelled or failed:', err);
+      console.error('Screen share error:', err);
       if (err.name !== 'NotAllowedError') {
-        toast.error('Screen share error: ' + (err.message || 'Failed'));
+        toast.error('Screen share failed: ' + err.message);
       }
     }
   };
 
   return (
-    <div className="h-20 bg-[#1e1f22] border-t border-[#111214] px-6 flex items-center justify-center shrink-0 z-20">
-      <div className="flex items-center gap-3">
+    <div className="p-2 sm:p-3 shrink-0 flex items-center justify-center bg-[#1e1f22]/95 backdrop-blur-md border-t border-[#2b2d31] select-none z-20">
+      <div className="flex items-center gap-2 sm:gap-3 bg-[#111214]/90 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-[#2b2d31] shadow-xl">
         {/* 1. Mic Button */}
         <button
           onClick={handleToggleMic}
           disabled={isMicLoading}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isMicrophoneEnabled
               ? 'bg-[#23a55a] hover:bg-[#1f9250] text-white'
               : 'bg-[#f23f42] hover:bg-[#da373a] text-white'
@@ -89,11 +89,11 @@ export default function VoiceControls({ onDisconnect }) {
           title={isMicrophoneEnabled ? 'Mute Microphone' : 'Unmute Microphone'}
         >
           {isMicLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin text-white" />
+            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-white" />
           ) : isMicrophoneEnabled ? (
-            <Mic className="w-5 h-5" />
+            <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
           ) : (
-            <MicOff className="w-5 h-5" />
+            <MicOff className="w-4 h-4 sm:w-5 sm:h-5" />
           )}
         </button>
 
@@ -101,7 +101,7 @@ export default function VoiceControls({ onDisconnect }) {
         <button
           onClick={handleToggleCamera}
           disabled={isCameraLoading}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isCameraEnabled
               ? 'bg-[#23a55a] hover:bg-[#1f9250] text-white'
               : 'bg-[#f23f42] hover:bg-[#da373a] text-white'
@@ -109,50 +109,53 @@ export default function VoiceControls({ onDisconnect }) {
           title={isCameraEnabled ? 'Turn Off Camera' : 'Turn On Camera'}
         >
           {isCameraLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin text-white" />
+            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-white" />
           ) : isCameraEnabled ? (
-            <Video className="w-5 h-5" />
+            <Video className="w-4 h-4 sm:w-5 sm:h-5" />
           ) : (
-            <VideoOff className="w-5 h-5" />
+            <VideoOff className="w-4 h-4 sm:w-5 sm:h-5" />
           )}
         </button>
 
         {/* 3. Screen Share Button */}
         <button
           onClick={handleToggleScreenShare}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isScreenShareEnabled
               ? 'bg-[#23a55a] hover:bg-[#1f9250] text-white'
               : 'bg-[#35373c] hover:bg-[#3f4147] text-white'
           }`}
           title={isScreenShareEnabled ? 'Stop Sharing Screen' : 'Share Screen'}
         >
-          {isScreenShareEnabled ? <MonitorOff className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
+          {isScreenShareEnabled ? (
+            <MonitorOff className="w-4 h-4 sm:w-5 sm:h-5" />
+          ) : (
+            <Monitor className="w-4 h-4 sm:w-5 sm:h-5" />
+          )}
         </button>
 
         {/* 4. Ephemeral Chat Toggle Button */}
         <button
           onClick={toggleChat}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
             isChatOpen
               ? 'bg-[#5865f2] hover:bg-[#4752c4] text-white'
               : 'bg-[#35373c] hover:bg-[#3f4147] text-white'
           }`}
           title={isChatOpen ? 'Close Voice Chat' : 'Open Voice Chat'}
         >
-          <MessageSquare className="w-5 h-5" />
+          <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
         {/* 5. Red Disconnect Button */}
         <button
           onClick={onDisconnect}
-          className="w-12 h-12 rounded-full bg-[#f23f42] hover:bg-[#da373a] text-white flex items-center justify-center transition-all cursor-pointer shadow-md ml-2"
+          className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#f23f42] hover:bg-[#da373a] text-white flex items-center justify-center transition-all cursor-pointer shadow-md ml-1 sm:ml-2"
           title="Disconnect from Voice Channel"
         >
-          <PhoneOff className="w-5 h-5" />
+          <PhoneOff className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
     </div>
   );
 }
-
